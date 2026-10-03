@@ -17,3 +17,17 @@ CORLOR_CARD = "#FFFFFF"  # Color de los botones
 # Tipografías
 TIPOGRAFIA_TITULO = "Helvetica, sans-serif"  # Tipografía para títulos
 TIPOGRAFIA_TEXTO = "Verdana, sans-serif"  # Tipografía para el texto
+
+import ttkbootstrap as ttk
+
+ttk.Theme(
+    name="wendo",
+    primary="#1E3A8A", 
+    success="#10B981", 
+    info="#2563EB",
+    warning="#efa31d", 
+    danger="#fc3939",
+    neutral="#FFFFFF",
+    light=dict(background="#D3E4FE", foreground="#17141f"),
+    dark=dict(background="#17141f", foreground="#e9ecef"),
+).register()

@@ -6,13 +6,11 @@
 
 import ttkbootstrap as ttk
 
+class search_view(ttk.Frame):
 
-class WendoApp(ttk.Window):
 
-    def __init__(self):
-        super().__init__(
-            title="Wendo", themename="gruvbox-dark", size=(800, 600)
-        )
+    def __init__(self, parent):
+        super().__init__(parent)
         self.create_widgets()
 
     def create_widgets(self):
@@ -43,7 +41,6 @@ class WendoApp(ttk.Window):
         )
         search_btn.pack(side="left")
 
-
     def limpiar_placeholder(self, event):
         if self.search_entry.get() == "Escribe para buscar...":
             self.search_entry.delete(0, "end")
@@ -56,9 +53,8 @@ class WendoApp(ttk.Window):
         print("Abriendo sección de reportes...")
 
 
-if __name__ == "__main__":
-    app = WendoApp()
-    app.mainloop()
+    
+
 
 
 

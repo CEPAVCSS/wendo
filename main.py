@@ -41,7 +41,7 @@ class WendoApp():
         )
         self.app.style.configure(
             "TButton",
-            background="#85878B",
+            background="#85878B00",
             foreground="white",
             font=("Helvetica", 10, "bold"),
         )
@@ -57,7 +57,7 @@ class WendoApp():
             warning="#efa31d", 
             danger="#fc3939",
             neutral="#FFFFFF",
-            light=dict(background="#D3E4FE", foreground="#17141f"),
+            light=dict(background="#E3ECF9", foreground="#17141f"),
             dark=dict(background="#17141f", foreground="#e9ecef"),
         ).register()
 

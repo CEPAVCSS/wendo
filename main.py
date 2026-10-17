@@ -40,10 +40,13 @@ class WendoApp():
             font=("Verdana", 12),
         )
         self.app.style.configure(
-            "TButton",
-            background="#85878B00",
-            foreground="white",
+            "Menu.TButton",
+            background="#FFFFFF",
+            foreground="#17141f",
             font=("Helvetica", 10, "bold"),
+            anchor="w",
+            borderwidth=0,
+            relief="flat",
         )
         self.app.style.configure(
             "TFrame",

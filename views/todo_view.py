@@ -12,11 +12,13 @@ class TodoView(ttk.Frame):
                   text=self.App_title, 
                   anchor="w",
                   justify="left",
-                  font=("Helvetica", 16, "bold")).grid(row=0, column=0)
+                  font=("Helvetica", 16, "bold")).grid(row=0, column=0, sticky="w")
 
         ttk.Label(self.container, 
                   text="Gestión de pendientes, prioridades comerciales y fechas límites con resolución rápida", 
-                  font=("Helvetica", 12)).grid(row=1, column=0)
+                  anchor="w",
+                  justify="left",
+                  font=("Helvetica", 12)).grid(row=1, column=0, sticky="w")
           
-        ttk.Button(self.container, text="Agregar Tarea", bootstyle="@neutral").grid(row=1, column=0, pady=2)
-        ttk.Button(self.container, text="Ver Tareas", bootstyle="@neutral").grid(row=2, column=0, pady=2)
+        # ttk.Button(self.container, text="Agregar Tarea", bootstyle="@neutral").grid(row=1, column=0, pady=2)
+        # ttk.Button(self.container, text="Ver Tareas", bootstyle="@neutral").grid(row=2, column=0, pady=2)

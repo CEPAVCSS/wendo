@@ -1,22 +1,19 @@
-
 # Fecha: 10/10/2026
 # Autor: christopher claro
 # Mi contacto: chrischrisgc@gmail.com
 # barra de busqueda para los reportes
 
-
-
 import ttkbootstrap as ttk
-
-class search_view(ttk.Frame):
+class SearchView(ttk.Frame):
 
 #Este metodo es para inicializar la clase search_view
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, master):
+        super().__init__(master)
+        self.master = master
         self.create_widgets()
 #Este metodo es para crear los widgets de la interfaz
     def create_widgets(self):
-        main_container = ttk.Frame(self, padding=20)
+        main_container = ttk.Frame(self.master)
         main_container.pack(fill="both", expand=True)
 
         
@@ -28,7 +25,7 @@ class search_view(ttk.Frame):
         lupa_label.pack(side="left", padx=(0, 5))
 
         
-        self.search_entry = ttk.Entry(search_frame)
+        self.search_entry = ttk.Entry(search_frame, bootstyle="outline-neutral")
         self.search_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
         
         self.search_entry.insert(0, "Escribe para buscar reportes...")

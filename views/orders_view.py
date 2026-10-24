@@ -8,3 +8,6 @@ class OrdersView(ttk.Frame):
         ttk.Label(self.container, text=self.App_title, font=("Helvetica", 16, "bold")).pack(pady=10)
         ttk.Button(self.container, text="Agregar Pedido", bootstyle="@neutral").pack(pady=2)
         ttk.Button(self.container, text="Ver Pedidos", bootstyle="@neutral").pack(pady=2)
+
+        #Treeview para pedidos
+        self.tree = ttk.Treeview(self.container, columns=("ID", "Cliente", "Fecha", "Total"), show="headings")

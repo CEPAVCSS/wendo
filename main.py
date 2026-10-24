@@ -12,7 +12,7 @@ class WendoApp():
         self.title = "Wendo"
         # self.master = master
         # self.pack()
-        self.app = ttk.App(title=self.title, size=(800, 600)) 
+        self.app = ttk.App(title=self.title, size=(850, 620)) 
         Utils.center_window(self.app)
 
     def configure(self):

@@ -1,5 +1,6 @@
 import ttkbootstrap as ttk
-
+from ttkbootstrap.tableview import Tableview
+from ttkbootstrap.constants import *
 class OrdersView(ttk.Frame):
     def __init__(self, master):
         super().__init__(master, padding=8)
@@ -9,5 +10,4 @@ class OrdersView(ttk.Frame):
         ttk.Button(self.container, text="Agregar Pedido", bootstyle="@neutral").pack(pady=2)
         ttk.Button(self.container, text="Ver Pedidos", bootstyle="@neutral").pack(pady=2)
 
-        #Treeview para pedidos
-        self.tree = ttk.Treeview(self.container, columns=("ID", "Cliente", "Fecha", "Total"), show="headings")
+#Contenedor Principal

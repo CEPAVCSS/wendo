@@ -5,6 +5,7 @@ Author: Curso CEPAV
 """
 import ttkbootstrap as ttk
 import views.sidebar as S
+from utils.utils import Utils
 
 class WendoApp():
     def __init__(self, master=None):
@@ -12,6 +13,7 @@ class WendoApp():
         # self.master = master
         # self.pack()
         self.app = ttk.App(title=self.title, size=(800, 600)) 
+        Utils.center_window(self.app)
 
     def configure(self):
         # Configuración de la ventana principal

@@ -40,10 +40,13 @@ class WendoApp():
             font=("Verdana", 12),
         )
         self.app.style.configure(
-            "TButton",
-            background="#85878B",
-            foreground="white",
+            "Menu.TButton",
+            background="#FFFFFF",
+            foreground="#17141f",
             font=("Helvetica", 10, "bold"),
+            anchor="w",
+            borderwidth=0,
+            relief="flat",
         )
         self.app.style.configure(
             "TFrame",
@@ -57,7 +60,7 @@ class WendoApp():
             warning="#efa31d", 
             danger="#fc3939",
             neutral="#FFFFFF",
-            light=dict(background="#D3E4FE", foreground="#17141f"),
+            light=dict(background="#E3ECF9", foreground="#17141f"),
             dark=dict(background="#17141f", foreground="#e9ecef"),
         ).register()
 

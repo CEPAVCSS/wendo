@@ -20,7 +20,7 @@ class ProvidersView(ttk.Frame):
 
     def agregar_proveedor(self, master=None):
         #---Ventana emergente para agregar un proveedor---#
-        ventana_agregar = ttk.Toplevel(master)
+        ventana_agregar = ttk.Toplevel("master")
         ventana_agregar.title("Agregar Proveedor")
         ventana_agregar.geometry("400x300")
         Utils.center_window(ventana_agregar)

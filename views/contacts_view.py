@@ -125,9 +125,17 @@ class ContactsView(ttk.Frame):
             ttk.Label(field_frame, text=label).grid(row=0, column=0, sticky="w")
             variable = ttk.StringVar(value="Activo" if field == "status" else "")
             self.contact_vars[field] = variable
-            ttk.Entry(field_frame, textvariable=variable).grid(
-                row=1, column=0, sticky="ew", pady=(3, 0)
-            )
+            if field == "segment":
+                ttk.Combobox(
+                    field_frame,
+                    textvariable=variable,
+                    values=("Natural", "Corporativo", "Mayorista", "PYME", "Otro"),
+                    state="readonly",
+                ).grid(row=1, column=0, sticky="ew", pady=(3, 0))
+            else:
+                ttk.Entry(field_frame, textvariable=variable).grid(
+                    row=1, column=0, sticky="ew", pady=(3, 0)
+                )
 
         ttk.Label(form, text="Dirección").grid(
             row=4, column=0, columnspan=2, sticky="w", padx=4, pady=(8, 0)

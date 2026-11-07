@@ -25,25 +25,35 @@ class TodoModel:
 
         header = ["Tarea", "Fecha Límite", "Prioridad", "Descripcion", "Estado"]
 
-        columns = "tarea, fecha, prioridad, descripcion, status"
-        complete_tasks = self.db.fetch_all(
-            f"SELECT {columns} FROM tasks WHERE status = ?",
-            ("Completada",),
+        columns = "id_task, tarea, fecha, prioridad, descripcion, status"
+        tasks = self.db.fetch_all(
+            f"SELECT {columns} FROM tasks ORDER BY id_task DESC"
         )
-        pending_tasks = self.db.fetch_all(
-            f"SELECT {columns} FROM tasks WHERE status = ?",
-            ("Pendiente",),
-        )
+        return header, tasks
 
-        return header, pending_tasks, complete_tasks
+    def get_task(self, task_id):
+        tasks = self.db.fetch_all(
+            "SELECT id_task, tarea, fecha, prioridad, descripcion, status "
+            "FROM tasks WHERE id_task = ?",
+            (task_id,),
+        )
+        return tasks[0] if tasks else None
 
     def delete_task(self, task_id):
-        sql = "DELETE FROM tasks WHERE id = ?"
-        params = (task_id,)
-        self.db.execute(sql, params)
+        self.db.execute("DELETE FROM tasks WHERE id_task = ?", (task_id,))
 
     def update_task(self, task_id, updated_task):
-        sql = "UPDATE tasks SET title = ?, due_date = ?, priority = ?, description = ?, status = ? WHERE id = ?"
-        params = (updated_task["tarea"], updated_task["fecha"], updated_task["prioridad"], updated_task["descripcion"], updated_task["estado"], task_id)
+        sql = (
+            "UPDATE tasks SET tarea = ?, fecha = ?, prioridad = ?, "
+            "descripcion = ?, status = ? WHERE id_task = ?"
+        )
+        params = (
+            updated_task["tarea"],
+            updated_task["fecha"],
+            updated_task["prioridad"],
+            updated_task["descripcion"],
+            updated_task["estado"],
+            task_id,
+        )
         self.db.execute(sql, params)
 

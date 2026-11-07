@@ -61,7 +61,6 @@ class OrdersView(ttk.Frame):
         self.tree.heading("monto", text="MONTO")
         self.tree.heading("metodo", text="MÉTODO PAGO")
         self.tree.heading("estado", text="ESTADO")
-        self.tree.heading("acciones", text="ACCIONES")
 
         # Anchos de columnas
         self.tree.column("check", width=40, anchor=CENTER)
@@ -72,7 +71,6 @@ class OrdersView(ttk.Frame):
         self.tree.column("monto", width=100, anchor=E)
         self.tree.column("metodo", width=120, anchor=W)
         self.tree.column("estado", width=110, anchor=CENTER)
-        self.tree.column("acciones", width=100, anchor=CENTER)
 
         # Etiquetas (Tags) de colores para los estados
         self.tree.tag_configure("pagado", background="#D1E7DD", foreground="#0F5132")
@@ -81,10 +79,10 @@ class OrdersView(ttk.Frame):
 
         # Cargar Datos de prueba
         datos = [
-            ("☐", "ORD-2024-8841", "22 Sep 2024", "Venta", "Inversiones Médicas Pacífico", "$12,850.00", "Transferencia", "Pagado", "✔  📝  ✏"),
-            ("☐", "OC-2024-1092", "20 Sep 2024", "Compra", "Suministros Industriales Norte", "$6,400.00", "Crédito 30 Días", "Pendiente", "✔  📝  ✏"),
-            ("☐", "ORD-2024-8840", "19 Sep 2024", "Venta", "Distribuidora Mayorista", "$14,200.00", "Transferencia", "Pendiente", "✔  📝  ✏"),
-            ("☐", "ORD-2024-8835", "18 Sep 2024", "Venta", "Tecnología e Informática Quantum", "$21,870.00", "Tarjeta Corp.", "Entregado", "🗑  📝  ✏"),
+            ("☐", "ORD-2024-8841", "22 Sep 2024", "Venta", "Inversiones Médicas Pacífico", "$12,850.00", "Transferencia", "Pagado",),
+            ("☐", "OC-2024-1092", "20 Sep 2024", "Compra", "Suministros Industriales Norte", "$6,400.00", "Crédito 30 Días", "Pendiente",),
+            ("☐", "ORD-2024-8840", "19 Sep 2024", "Venta", "Distribuidora Mayorista", "$14,200.00", "Transferencia", "Pendiente"),
+            ("☐", "ORD-2024-8835", "18 Sep 2024", "Venta", "Tecnología e Informática Quantum", "$21,870.00", "Tarjeta Corp.", "Entregado")
         ]
 
         for item in datos:

@@ -1,4 +1,5 @@
-import os
+import sys
+from pathlib import Path
 import ttkbootstrap as ttk
 from PIL import Image, ImageTk
 import views.search_view as SV
@@ -37,7 +38,10 @@ class Sidebar(ttk.Frame):
 
         #Logo de la aplicación
     
-        self.path = os.path.join(os.path.dirname(__file__), "..", "assets", "images", "wendo-logo.png")
+        resource_root = Path(
+            getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1])
+        )
+        self.path = resource_root / "assets" / "images" / "wendo-logo.png"
         with Image.open(self.path) as logo:
             logo.thumbnail((140, 90), Image.Resampling.LANCZOS)
             self.logo_image = ImageTk.PhotoImage(logo, master=self.menu)

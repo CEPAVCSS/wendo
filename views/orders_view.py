@@ -1,5 +1,6 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+from utils.utils import Utils
 
 class OrdersView(ttk.Frame):
     def __init__(self, master):
@@ -109,13 +110,22 @@ class OrdersView(ttk.Frame):
                 valores[0] = "☑" if valores[0] == "☐" else "☐"
                 self.tree.item(item_id, values=valores)
 
+            def agregar_pedido(self, master=None):
+                #Ventana emergente para agregar un pedido a la lista de pedidos
+                ventana_agregar = ttk.TopLevel("master")
+                ventana_agregar.tittle("Agregar Pedido")
+                ventana_agregar.geometry("400x300")
+                Utils.center_window(ventana_agregar)
+                ventana_agregar.resizable(False, False)
+
+                ttk.Label(ventana_agregar, text="Agregar Pedido", font=("Helvetica", 16, "bold")).pack(pady=10)
+                ttk.Button(ventana_agregar, text="Guardar", bootstyle="success", command=ventana_agregar.destroy).pack(pady=10)
 
 # Ejecutar
 if __name__ == "__main__":
     app = ttk.Window(themename="flatly")
     app.title("Sistema de Gestión - Pedidos")
     app.geometry("1150x550")
-    
     view = OrdersView(app)
     
     app.mainloop()

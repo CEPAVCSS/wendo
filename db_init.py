@@ -13,7 +13,9 @@ class DbInit:
             tarea TEXT, 
             fecha TEXT, 
             prioridad TEXT, 
-            descripcion TEXT) """
+            descripcion TEXT,
+            status TEXT
+            ) """
 
         orders = """CREATE TABLE IF NOT EXISTS orders (
             id_order INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -40,9 +42,9 @@ class DbInit:
         contacts = """CREATE TABLE IF NOT EXISTS contacts (
             id_contact INTEGER PRIMARY KEY AUTOINCREMENT, 
             customer_name TEXT,
-            cedula_rif TEXT,
+            cedula_rif TEXT UNIQUE,
             phone TEXT,
-            email TEXT,
+            email TEXT UNIQUE,
             status TEXT,
             segment TEXT,
             main_contact TEXT,
@@ -52,4 +54,15 @@ class DbInit:
         
         for table in table_list:
             self.conn.execute(table)
+
+        self.conn.execute(
+            """CREATE UNIQUE INDEX IF NOT EXISTS idx_contacts_email_unique
+            ON contacts (LOWER(TRIM(email)))
+            WHERE email IS NOT NULL AND TRIM(email) <> ''"""
+        )
+        self.conn.execute(
+            """CREATE UNIQUE INDEX IF NOT EXISTS idx_contacts_cedula_unique
+            ON contacts (LOWER(TRIM(cedula_rif)))
+            WHERE cedula_rif IS NOT NULL AND TRIM(cedula_rif) <> ''"""
+        )
         

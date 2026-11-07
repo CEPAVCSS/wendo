@@ -32,7 +32,8 @@ class Sidebar(ttk.Frame):
             padding=8,
             borderwidth=8,
             bootstyle="bordered"
-            ).pack(side="top", fill="both", expand=True)
+            )
+        self.content.pack(side="top", fill="both", expand=True)
 
         #Logo de la aplicación
     

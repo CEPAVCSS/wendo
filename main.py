@@ -6,13 +6,15 @@ Author: Curso CEPAV
 import ttkbootstrap as ttk
 import views.sidebar as S
 from utils.utils import Utils
+from db_init import *
 
 class WendoApp():
     def __init__(self, master=None):
         self.title = "Wendo"
         # self.master = master
         # self.pack()
-        self.app = ttk.App(title=self.title, size=(800, 600)) 
+        DbInit()
+        self.app = ttk.App(title=self.title, size=(850, 620)) 
         Utils.center_window(self.app)
 
     def configure(self):

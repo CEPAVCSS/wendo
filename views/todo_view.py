@@ -8,7 +8,9 @@ class TodoView(ttk.Frame):
         super().__init__(master, padding=8)
         self.master = master
         self.container = ttk.Frame(master, padding=8)
-        self.container.pack(side="left", fill="y")
+        self.container.pack(fill="both", expand=True)
+        self.container.grid_columnconfigure(0, weight=1)
+        self.container.grid_rowconfigure(3, weight=1)
         self.App_title = "Lista de Tareas y Seguimiento operativo"
         self.controller = TodoController(self.container)
 
@@ -38,35 +40,39 @@ class TodoView(ttk.Frame):
                    command=self.agregar_tarea,
                    bootstyle="primary").grid(row=1, column=1, pady=2)
         
-        
+        self.show_tasks()
+
+    def show_tasks(self):
         # Datos de la tabla de tareas
-        self.header, self.pending_tasks, self.complete_tasks = self.controller.tasks
-
-        table = Tableview(
-        self.container,
-        coldata=self.header,
-        rowdata=self.pending_tasks,
-        bootstyle="primary",
-        autofit=True,
-        autoalign=True,
-      
-        paginated=True,).grid(row=3, column=0, columnspan=2, pady=10, sticky="nsew")
-        self.container.grid_rowconfigure(3, weight=1)
-
-       
-          
-        # ttk.Button(self.container, text="Agregar Tarea", bootstyle="@neutral").grid(row=1, column=0, pady=2)
-        # ttk.Button(self.container, text="Ver Tareas", bootstyle="@neutral").grid(row=2, column=0, pady=2)
+        self.header, self.pending_tasks, self.complete_tasks = self.controller.get_tasks()
+        columns = [
+            {"text": self.header[0], "width": 180, "minwidth": 100, "stretch": True},
+            {"text": self.header[1], "width": 130, "minwidth": 95, "stretch": True},
+            {"text": self.header[2], "width": 110, "minwidth": 80, "stretch": True},
+            {"text": self.header[3], "width": 260, "minwidth": 120, "stretch": True},
+            {"text": self.header[4], "width": 130, "minwidth": 95, "stretch": True},
+        ]
+        self.tasks_table = Tableview(
+            self.container,
+            coldata=columns,
+            rowdata=self.pending_tasks,
+            bootstyle="primary",
+            autofit=False,
+            autoalign=True,
+            paginated=True,
+            yscrollbar=True,
+        )
+        self.tasks_table.grid(row=3, column=0, columnspan=2, pady=10, sticky="nsew")
 
     def agregar_tarea(self):
-        ventana_agregar = ttk.Toplevel(title="Agregar Tarea")
-        ventana_agregar.geometry("400x400")
-        Utils.center_window(ventana_agregar)
-        # ventana_agregar.resizable(False, False)
+        self.ventana_agregar = ttk.Toplevel(title="Agregar Tarea")
+        self.ventana_agregar.geometry("400x400")
+        Utils.center_window(self.ventana_agregar)
+        # self.ventana_agregar.resizable(False, False)
 
 
         # titulo ventana
-        new_task = ttk.Labelframe(ventana_agregar,
+        new_task = ttk.Labelframe(self.ventana_agregar,
                       text="Nueva Tarea",
                       bootstyle="primary",
                       padding=12)
@@ -88,10 +94,7 @@ class TodoView(ttk.Frame):
         ttk.Label(new_task, text="Descripción").pack(anchor="w")
         self.desc = ttk.Text(new_task, height=5).pack(fill="x")
 
-
-        
-
-        ttk.Button(ventana_agregar, text="Crear Tarea", bootstyle="primary", command=self.crear_tarea).pack(fill="x", pady=3, padx=10)
+        ttk.Button(self.ventana_agregar, text="Crear Tarea", bootstyle="primary", command=self.crear_tarea).pack(fill="x", pady=3, padx=10)
 
     def crear_tarea(self):
 
@@ -102,5 +105,8 @@ class TodoView(ttk.Frame):
                     "descripcion" : self.desc.get("1.0", "end-1c")
                 }
 
-        print(f"Creando tareas...{self.new_task}")
-        pass
+        # print(f"Creando tareas...{self.new_task}")
+        self.controller.model.add_task(self.new_task)
+        self.ventana_agregar.destroy()
+        self.tasks_table.destroy()
+        self.show_tasks()

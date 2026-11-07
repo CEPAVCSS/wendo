@@ -1,49 +1,49 @@
 from .conector.SQLiteConector import *
 
 class TodoModel:
+    """
+        Agregar la tarea a la base de datos
+        Estados de las Tareas: Pendiente, Completada, En progreso, Cancelada  
+        Metodos disponibles:
+        - add_task: Agrega una nueva tarea a la base de datos
+        - get_tasks: Obtiene todas las tareas de la base de datos, separadas por estado (pendientes y completadas)
+        - delete_task: Elimina una tarea de la base de datos
+        - update_task: Actualiza una tarea en la base de datos 
+    """
     def __init__(self):
         self.tasks = []
-        self.conn = SQLiteConnector()
-        
-        self.seeder() # Crear Tabla de tareas si no existe
+        self.db = SQLiteConnector()
 
 
     def add_task(self, task):
-        self.tasks.append(task)
+
+        sql = "INSERT INTO tasks (tarea, fecha, prioridad, descripcion, status) VALUES (?, ?, ?, ?, ?)"
+        params = (task["tarea"], task["fecha"], task["prioridad"], task["descripcion"], "Pendiente")
+        self.db.execute(sql, params)
 
     def get_tasks(self):
 
+        header = ["Tarea", "Fecha Límite", "Prioridad", "Descripcion", "Estado"]
 
-
-        header = ["Tarea", "Fecha Límite", "Prioridad", "Descripcion"]
-        complete_tasks = [
-            ["Revisar correos electrónicos", "2024-06-15", "Alta", "Revisar y responder correos electrónicos importantes."],
-            ["Preparar informe de ventas", "2024-06-20", "Media", "Preparar informe de ventas del trimestre."],
-            ["Llamar a proveedor", "2024-06-18", "Baja", "Llamar al proveedor para confirmar entrega."],
-            ["Actualizar base de datos de clientes", "2024-06-22", "Alta", "Actualizar información de clientes en la base de datos."],
-            ["Reunión con equipo de marketing", "2024-06-19", "Media", "Reunión para discutir la estrategia de marketing."],
-            ["Revisar presupuesto del proyecto", "2024-06-21", "Alta", "Revisar y aprobar el presupuesto del proyecto."],
-            ["Enviar propuesta a cliente potencial", "2024-06-23", "Baja", "Enviar propuesta a cliente potencial."],
-            ["Organizar archivo de documentos", "2024-06-24", "Media", "Organizar archivo de documentos."],
-            ["Actualizar perfil de LinkedIn", "2024-06-25", "Baja", "Actualizar perfil de LinkedIn."],
-            ["Planificar estrategia de redes sociales", "2024-06-26", "Alta", "Planificar estrategia de redes sociales."]
-        ]
-        pending_tasks = [
-            ["Revisar correos electrónicos", "2024-06-15", "Alta", "Revisar y responder correos electrónicos importantes."],
-            ["Preparar informe de ventas", "2024-06-20", "Media", "Preparar informe de ventas del trimestre."],
-            ["Llamar a proveedor", "2024-06-18", "Baja", "Llamar al proveedor para confirmar entrega."],
-            ["Reunión con equipo de marketing", "2024-06-19", "Media", "Reunión para discutir la estrategia de marketing."],
-            ["Revisar presupuesto del proyecto", "2024-06-21", "Alta", "Revisar y aprobar el presupuesto del proyecto."],
-            ["Enviar propuesta a cliente potencial", "2024-06-23", "Baja", "Enviar propuesta a cliente potencial."],
-            ["Organizar archivo de documentos", "2024-06-24", "Media", "Organizar archivo de documentos."],
-            ["Actualizar perfil de LinkedIn", "2024-06-25", "Baja", "Actualizar perfil de LinkedIn."],
-            ["Planificar estrategia de redes sociales", "2024-06-26", "Alta", "Planificar estrategia de redes sociales."]
-        ]
+        columns = "tarea, fecha, prioridad, descripcion, status"
+        complete_tasks = self.db.fetch_all(
+            f"SELECT {columns} FROM tasks WHERE status = ?",
+            ("Completada",),
+        )
+        pending_tasks = self.db.fetch_all(
+            f"SELECT {columns} FROM tasks WHERE status = ?",
+            ("Pendiente",),
+        )
 
         return header, pending_tasks, complete_tasks
 
+    def delete_task(self, task_id):
+        sql = "DELETE FROM tasks WHERE id = ?"
+        params = (task_id,)
+        self.db.execute(sql, params)
 
-    def seeder(self):
+    def update_task(self, task_id, updated_task):
+        sql = "UPDATE tasks SET title = ?, due_date = ?, priority = ?, description = ?, status = ? WHERE id = ?"
+        params = (updated_task["tarea"], updated_task["fecha"], updated_task["prioridad"], updated_task["descripcion"], updated_task["estado"], task_id)
+        self.db.execute(sql, params)
 
-        sql = "CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, tarea TEXT, fecha TEXT, prioridad TEXT, descripcion TEXT)"
-        self.conn.execute(sql)

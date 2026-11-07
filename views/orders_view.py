@@ -1,5 +1,6 @@
 import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
+from ttkbootstrap.constants import BOTH, LEFT, YES, RIGHT, X, Y, CENTER, W, E, VERTICAL, END
+from ttkbootstrap.widgets import Tableview
 from utils.utils import Utils
 
 class OrdersView(ttk.Frame):
@@ -10,7 +11,7 @@ class OrdersView(ttk.Frame):
         self.container.pack(side=LEFT, fill=Y)
         self.App_title = "Pedidos"
         ttk.Label(self.container, text=self.App_title, font=("Helvetica", 16, "bold")).pack(pady=10)
-        ttk.Button(self.container, text="Agregar Pedido", bootstyle="primary").pack(pady=4, fill=X)
+        ttk.Button(self.container, text="Agregar Pedido", bootstyle="primary", command=self.agregar_pedido).pack(pady=4, fill=X)
         ttk.Button(self.container, text="Ver Pedidos", bootstyle="outline-secondary").pack(pady=4, fill=X)
 
         # ÁREA PRINCIPAL (DERECHA: FILTROS + TREEVIEW)
@@ -88,7 +89,7 @@ class OrdersView(ttk.Frame):
 
         for item in datos:
             estado_tag = item[7].lower()
-            self.tree.insert("", END, values=item, tags=(estado_tag,))
+            self.tree.insert("", "end", values=item, tags=(estado_tag,))
 
         # Scrollbar vertical
         scrollbar = ttk.Scrollbar(tree_frame, orient=VERTICAL, command=self.tree.yview)
@@ -110,17 +111,17 @@ class OrdersView(ttk.Frame):
                 valores[0] = "☑" if valores[0] == "☐" else "☐"
                 self.tree.item(item_id, values=valores)
 
-            def agregar_pedido(self, master=None):
-                #Ventana emergente para agregar un pedido a la lista de pedidos
-                ventana_agregar = ttk.TopLevel("master")
-                ventana_agregar.tittle("Agregar Pedido")
-                ventana_agregar.geometry("400x300")
-                Utils.center_window(ventana_agregar)
-                ventana_agregar.resizable(False, False)
-
-                ttk.Label(ventana_agregar, text="Agregar Pedido", font=("Helvetica", 16, "bold")).pack(pady=10)
-                ttk.Button(ventana_agregar, text="Guardar", bootstyle="success", command=ventana_agregar.destroy).pack(pady=10)
-
+    def agregar_pedido(self, master=None):
+            #---Ventana emergente para agregar un proveedor---#
+            ventana_agregar = ttk.Toplevel("master")
+            ventana_agregar.title("Agregar Pedido")
+            ventana_agregar.geometry("400x300")
+            Utils.center_window(ventana_agregar)
+    
+            ventana_agregar.resizable(False, False)
+    
+            ttk.Label(ventana_agregar, text="Agregar Pedido", font=("Helvetica", 16, "bold")).pack(pady=10)
+            ttk.Button(ventana_agregar, text="Guardar", bootstyle="success", command=ventana_agregar.destroy).pack(pady=10)
 # Ejecutar
 if __name__ == "__main__":
     app = ttk.Window(themename="flatly")

@@ -1,13 +1,19 @@
-
+from .conector.SQLiteConector import *
 
 class TodoModel:
     def __init__(self):
         self.tasks = []
+        self.conn = SQLiteConnector()
+        
+        self.seeder() # Crear Tabla de tareas si no existe
+
 
     def add_task(self, task):
         self.tasks.append(task)
 
     def get_tasks(self):
+
+
 
         header = ["Tarea", "Fecha Límite", "Prioridad", "Descripcion"]
         complete_tasks = [
@@ -35,3 +41,9 @@ class TodoModel:
         ]
 
         return header, pending_tasks, complete_tasks
+
+
+    def seeder(self):
+
+        sql = "CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, tarea TEXT, fecha TEXT, prioridad TEXT, descripcion TEXT)"
+        self.conn.execute(sql)

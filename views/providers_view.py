@@ -443,7 +443,7 @@ class ProvidersView(ttk.Frame):
 
         ttk.Label(
             form,
-            text="Dirección Fiscal Detallada",
+            text="Dirección Fiscal",
             font=("Helvetica", 9, "bold"),
         ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(8, 0))
         address = ttk.Text(form, height=3, wrap="word")
@@ -466,13 +466,14 @@ class ProvidersView(ttk.Frame):
             command=dialog.destroy,
         ).pack(side=RIGHT, padx=(0, 8))
 
+
     def _save_provider(self, dialog, address, provider_id=None):
         provider = {
             "rif_prefix": self.rif_prefix.get().strip(),
             "rif_number": self.rif_number.get().strip(),
             "reason": self.reason.get().strip(),
             "provider_type": self.provider_type.get().strip(),
-            "conatct_name": self.contact_name.get().strip(),
+            "contact_name": self.contact_name.get().strip(),
             "contact_phone": self.contact_phone.get().strip(),
             "contact_email": self.contact_email.get().strip(),
             "state": self.state.get().strip(),
@@ -497,3 +498,4 @@ class ProvidersView(ttk.Frame):
 
         dialog.destroy()
         self.refresh()
+

@@ -13,7 +13,7 @@ class ProvidersModel:
         "rif_number",
         "reason",
         "provider_type",
-        "conatct_name",
+        "contact_name",
         "contact_phone",
         "contact_email",
         "state",

@@ -106,6 +106,7 @@ class SearchView(ttk.Frame):
         )
         entry.pack(side=LEFT, fill=X, expand=True)
         entry.bind("<Return>", lambda _event: self.execute_search())
+        self.search_entry = entry
 
         ttk.Button(
             search_frame,
@@ -119,6 +120,14 @@ class SearchView(ttk.Frame):
             bootstyle="outline-secondary",
             command=self._clear_search,
         ).pack(side=LEFT, padx=(8, 0))
+        self.after(100, self._focus_search)
+
+    def _focus_search(self):
+        try:
+            if self.winfo_exists():
+                self.search_entry.focus_set()
+        except Exception:
+            pass
 
     def _build_filters(self):
         filter_frame = ttk.Frame(self)

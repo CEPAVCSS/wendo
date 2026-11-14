@@ -2,7 +2,7 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import BOTH, LEFT, YES, RIGHT, X, Y, CENTER, W, E, VERTICAL, END
 from ttkbootstrap.widgets import Tableview
 from utils.utils import Utils
-
+from controllers.orders_controller import OrdersController
 
 class OrdersView(ttk.Frame):
     def __init__(self, master):
@@ -284,6 +284,4 @@ if __name__ == "__main__":
     app.title("Sistema de Gestión - Pedidos")
     app.geometry("1150x550")
     view = OrdersView(app)
-    
     app.mainloop()
-    

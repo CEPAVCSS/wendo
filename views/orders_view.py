@@ -134,4 +134,28 @@ class OrdersView(ttk.Frame):
 
             ttk.Radiobutton(frame_tipo, text="Venta", variable=tipo_var, value="Venta", bootstyle="outline-toolbutton").pack(side=LEFT, expand=True, fill=BOTH)
             ttk.Radiobutton(frame_tipo, text="Compra", variable=tipo_var, value="Compra", bootstyle="outline-toolbutton").pack(side=LEFT, expand=True, fill=BOTH)
-            
+
+            #Cliente/Proveedor
+            ttk.Label(form_frame, text="ENTIDAD (CLIENTE / PROVEEDOR)", font=("Helvetica", 8, "bold")).grid(row=0, column=1, sticky="w", padx=5, pady=(0, 5))
+            entry_entidad = ttk.Entry(form_frame)
+            entry_entidad.insert(0, "Ej. Logística Global Andina S.A.")
+            entry_entidad.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
+
+            #Monto/Moneda
+            ttk.Label(form_frame, text="MONTO & MONEDA", font=("Helvetica", 8, "bold")).grid(row=0, column=2, sticky="w", padx=5, pady=(0, 5))
+            frame_monto = ttk.Frame(form_frame)
+            frame_monto.grid(row=1, column=2, sticky="ew", padx=5, pady=5)
+        
+            moneda = ttk.Combobox(frame_monto, values=["USD ($)", "EUR (€)", "BS (Bs.)"], width=8, state="readonly")
+            moneda.current(0)
+            moneda.pack(side=LEFT, padx=(0, 5))
+        
+            entry_monto = ttk.Entry(frame_monto)
+            entry_monto.insert(0, "0.00")
+            entry_monto.pack(side=LEFT, fill=X, expand=True)
+
+            # Método de Pago
+            ttk.Label(form_frame, text="MÉTODO DE PAGO", font=("Helvetica", 8, "bold")).grid(row=0, column=3, sticky="w", padx=5, pady=(0, 5))
+            pago = ttk.Combobox(form_frame, values=["Transferencia Bancaria", "Efectivo", "Tarjeta de Crédito"], state="readonly")
+            pago.current(0)
+            pago.grid(row=1, column=3, sticky="ew", padx=5, pady=5)

@@ -15,6 +15,7 @@ class OrdersModel:
         "customer_name",
         "order_status",
         "order_amount",
+        "order_currency",
     )
 
     def __init__(self, db=None):
@@ -43,6 +44,7 @@ class OrdersModel:
         customer_name = values[3]
         order_status = values[4] or "Pendiente"
         order_amount = values[5]
+        order_currency = values[6] or "USD"
 
         if not order_number:
             raise ValueError("El número de orden es obligatorio.")
@@ -52,6 +54,8 @@ class OrdersModel:
             raise ValueError("El asociado al pedido es obligatorio.")
         if order_status not in ("Pendiente", "Pagado", "Entregado", "Cancelado"):
             raise ValueError("Selecciona un estado válido.")
+        if order_currency not in ("USD", "EURO", "Bs"):
+            raise ValueError("Selecciona una divisa válida.")
 
         try:
             amount = float(order_amount)
@@ -78,6 +82,7 @@ class OrdersModel:
             customer_name,
             order_status,
             amount,
+            order_currency,
         )
 
     def add_order(self, order):
@@ -85,7 +90,8 @@ class OrdersModel:
         try:
             self.db.execute(
                 "INSERT INTO orders (order_number, order_date, order_type, "
-                "customer_name, order_status, order_amount) VALUES (?, ?, ?, ?, ?, ?)",
+                "customer_name, order_status, order_amount, order_currency) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 values,
             )
         except sqlite3.IntegrityError as error:
@@ -97,7 +103,7 @@ class OrdersModel:
         values = self._prepare_values(order, exclude_id=order_id)
         self.db.execute(
             "UPDATE orders SET order_number = ?, order_date = ?, order_type = ?, "
-            "customer_name = ?, order_status = ?, order_amount = ? "
+            "customer_name = ?, order_status = ?, order_amount = ?, order_currency = ? "
             "WHERE id_order = ?",
             values + (order_id,),
         )

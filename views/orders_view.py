@@ -16,7 +16,6 @@ from ttkbootstrap.constants import (
     YES,
 )
 from ttkbootstrap.dialogs import Messagebox
-
 from controllers.currency_controller import CurrencyController
 from controllers.orders_controller import OrdersController
 from controllers.providers_controller import ProvidersController
@@ -698,3 +697,5 @@ class OrdersView(ttk.Frame):
             bootstyle="danger-outline",
             command=dialog.destroy,
         ).pack(side=RIGHT, padx=(0, 8))
+
+        

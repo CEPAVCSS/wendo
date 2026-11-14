@@ -123,22 +123,23 @@ class SearchModel:
         if category in ("Todo", "Pedidos"):
             rows = self.db.fetch_all(
                 """SELECT id_order, order_number, order_date, order_type, customer_name,
-                          order_status, order_amount
+                          order_status, order_amount, order_currency
                    FROM orders
                    WHERE LOWER(COALESCE(order_number, '')) LIKE ?
                       OR LOWER(COALESCE(order_date, '')) LIKE ?
                       OR LOWER(COALESCE(order_type, '')) LIKE ?
                       OR LOWER(COALESCE(customer_name, '')) LIKE ?
                       OR LOWER(COALESCE(order_status, '')) LIKE ?
+                      OR LOWER(COALESCE(order_currency, '')) LIKE ?
                       OR CAST(COALESCE(order_amount, 0) AS TEXT) LIKE ?
                    ORDER BY order_date DESC, id_order DESC""",
-                (term,) * 6,
+                (term,) * 7,
             )
             for row in rows:
                 try:
-                    amount = f"${float(row['order_amount'] or 0):,.2f}"
+                    amount = f"{row['order_currency'] or 'USD'} {float(row['order_amount'] or 0):,.2f}"
                 except (TypeError, ValueError):
-                    amount = "$0.00"
+                    amount = f"{row['order_currency'] or 'USD'} 0.00"
                 detail = " · ".join(
                     part
                     for part in (

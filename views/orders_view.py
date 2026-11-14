@@ -1,4 +1,5 @@
 import ttkbootstrap as ttk
+from tkinter import StringVar 
 from ttkbootstrap.constants import BOTH, LEFT, YES, RIGHT, X, Y, CENTER, W, E, VERTICAL, END
 from ttkbootstrap.widgets import Tableview
 from utils.utils import Utils
@@ -112,22 +113,25 @@ class OrdersView(ttk.Frame):
                 self.tree.item(item_id, values=valores)
 
     def agregar_pedido(self, master=None):
-            #---Ventana emergente para agregar un proveedor---#
-            ventana_agregar = ttk.Toplevel("master")
+            #---Ventana emergente para agregar un pedido---#
+            ventana_agregar = ttk.Toplevel(master)
             ventana_agregar.title("Agregar Pedido")
-            ventana_agregar.geometry("400x300")
+            ventana_agregar.geometry("920x280")
             Utils.center_window(ventana_agregar)
     
             ventana_agregar.resizable(False, False)
     
-            ttk.Label(ventana_agregar, text="Agregar Pedido", font=("Helvetica", 16, "bold")).pack(pady=10)
-            ttk.Button(ventana_agregar, text="Guardar", bootstyle="success", command=ventana_agregar.destroy).pack(pady=10)
-# Ejecutar
-if __name__ == "__main__":
-    app = ttk.Window(themename="flatly")
-    app.title("Sistema de Gestión - Pedidos")
-    app.geometry("1150x550")
-    view = OrdersView(app)
-    
-    app.mainloop()
-    
+            #Registro Rapido de los pedidos
+            form_frame = ttk.Labelframe(ventana_agregar, text ="Formulario de Registro Rapido", padding=15, bootstyle="info")
+            form_frame.pack(fill=BOTH, expand=YES, padx=15, pady=15)
+
+            #Tipo de Movimiento 
+            ttk.Label(form_frame, text= "TIPO DE MOVIMIENTO", font=("Helvetica", 8, "bold")).grid(row=0, column=0, sticky="w", padx=5, pady=(0, 5))
+
+            tipo_var = ttk.StringVar(value="Venta")
+            frame_tipo = ttk.Frame(form_frame)
+            frame_tipo.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
+
+            ttk.Radiobutton(frame_tipo, text="Venta", variable=tipo_var, value="Venta", bootstyle="outline-toolbutton").pack(side=LEFT, expand=True, fill=BOTH)
+            ttk.Radiobutton(frame_tipo, text="Compra", variable=tipo_var, value="Compra", bootstyle="outline-toolbutton").pack(side=LEFT, expand=True, fill=BOTH)
+            

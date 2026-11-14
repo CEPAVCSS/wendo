@@ -10,6 +10,7 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(project_root / "assets" / "images" / "wendo-logo.png"), "assets/images"),
+        (str(project_root / "assets" / "images" / "wendo-logo-f-gris.png"), "assets/images"),
     ],
     hiddenimports=[],
     hookspath=[],

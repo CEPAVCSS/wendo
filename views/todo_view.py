@@ -1,145 +1,262 @@
 import ttkbootstrap as ttk
+from ttkbootstrap.constants import (
+    BOTH,
+    CENTER,
+    END,
+    LEFT,
+    RIGHT,
+    VERTICAL,
+    W,
+    X,
+    Y,
+    YES,
+)
 from ttkbootstrap.dialogs import Messagebox
-from ttkbootstrap.widgets import Tableview
+
 from controllers.todo_controller import TodoController
 from utils.utils import Utils
+
 
 class TodoView(ttk.Frame):
     def __init__(self, master):
         super().__init__(master, padding=8)
+        self.pack(fill=BOTH, expand=YES)
         self.master = master
-        self.container = ttk.Frame(master, padding=8)
-        self.container.pack(fill="both", expand=True)
-        self.container.grid_columnconfigure(0, weight=1)
-        self.container.grid_rowconfigure(3, weight=1)
-        self.App_title = "Lista de Tareas y Seguimiento operativo"
-        self.controller = TodoController(self.container)
-        self.task_notebook = None
-        self.task_tables = {}
-        self.task_pages = {}
+        self.controller = TodoController(self)
+        self.tasks = []
         self.selected_state = "Todas"
+        self.search_text = ""
+        self.filter_buttons = {}
 
-        #badge
-        ttk.Label(self.container, 
-                  text="PRODUCTIVIDAD DIARIA", 
-                  bootstyle="primary", 
-                  font=("Helvetica", 7, "bold")).grid(row=0, column=0, sticky="w", pady=(0, 10))
+        self.container = ttk.Frame(self, padding=8)
+        self.container.pack(side=LEFT, fill=Y)
+        self.App_title = "Tareas"
+        ttk.Label(
+            self.container,
+            text=self.App_title,
+            font=("Helvetica", 16, "bold"),
+        ).pack(pady=10)
+        self.count_label = ttk.Label(
+            self.container,
+            text="",
+            font=("Helvetica", 9),
+            bootstyle="secondary",
+        )
+        self.count_label.pack(pady=(0, 8))
 
-        #Titulo de la ventana
-        ttk.Label(self.container, 
-                  text=self.App_title, 
-                  anchor="w",
-                  justify="left",
-                  font=("Helvetica", 16, "bold")).grid(row=1, column=0, sticky="w")
+        ttk.Button(
+            self.container,
+            text="Agregar Tarea Rápida",
+            bootstyle="primary",
+            command=self.agregar_tarea,
+        ).pack(pady=4, fill=X)
+        ttk.Button(
+            self.container,
+            text="Ver Tareas",
+            bootstyle="outline-secondary",
+            command=self.refresh,
+        ).pack(pady=4, fill=X)
+        ttk.Button(
+            self.container,
+            text="Editar Tarea",
+            bootstyle="outline-primary",
+            command=self._edit_selected_task,
+        ).pack(pady=4, fill=X)
+        ttk.Button(
+            self.container,
+            text="Eliminar Tarea",
+            bootstyle="outline-danger",
+            command=self._delete_selected_task,
+        ).pack(pady=4, fill=X)
 
-        ttk.Label(self.container, 
-                  text="Gestión de pendientes, prioridades comerciales y fechas límites con resolución rápida", 
-                  anchor="w",
-                  justify="left",
-                  font=("Helvetica", 12)).grid(row=2, column=0, sticky="w")
+        self.main_area = ttk.Frame(self, padding=12)
+        self.main_area.pack(side=RIGHT, fill=BOTH, expand=YES)
 
+        self.setup_filters()
+        self.setup_treeview()
+        self.refresh()
 
-        # Botón para agregar una nueva tarea
-        ttk.Button(self.container, 
-                   text="Agregar Tarea Rápida", 
-                   command=self.agregar_tarea,
-                   bootstyle="primary").grid(row=1, column=1, pady=2)
-        
-        self.show_tasks()
+    def setup_filters(self):
+        filter_frame = ttk.Frame(self.main_area, padding=(0, 0, 0, 10))
+        filter_frame.pack(fill=X)
+
+        ttk.Label(
+            filter_frame,
+            text="FILTROS:",
+            font=("Helvetica", 9, "bold"),
+            bootstyle="secondary",
+        ).pack(side=LEFT, padx=(0, 10))
+
+        states = (
+            ("Todas", "Todas"),
+            ("Pendiente", "Pendientes"),
+            ("En progreso", "En progreso"),
+            ("Completada", "Completadas"),
+            ("Cancelada", "Canceladas"),
+        )
+        self.state_labels = dict(states)
+        for key, label in states:
+            button = ttk.Button(
+                filter_frame,
+                text=label,
+                bootstyle="primary" if key == "Todas" else "secondary-outline",
+                command=lambda current=key: self.show_tasks(current),
+            )
+            button.pack(side=LEFT, padx=2)
+            self.filter_buttons[key] = button
+
+        ttk.Label(filter_frame, text="Buscar:", bootstyle="secondary").pack(
+            side=RIGHT, padx=(10, 4)
+        )
+        self.search_var = ttk.StringVar()
+        self.search_var.trace_add("write", lambda *_args: self._on_search())
+        ttk.Entry(
+            filter_frame,
+            textvariable=self.search_var,
+            bootstyle="light",
+            width=24,
+        ).pack(side=RIGHT)
+
+    def setup_treeview(self):
+        tree_frame = ttk.Frame(self.main_area)
+        tree_frame.pack(fill=BOTH, expand=YES)
+
+        columns = ("tarea", "fecha", "prioridad", "descripcion", "estado")
+        self.tree = ttk.Treeview(
+            tree_frame,
+            columns=columns,
+            show="headings",
+            bootstyle="light",
+        )
+
+        headings = {
+            "tarea": "TAREA",
+            "fecha": "FECHA LÍMITE",
+            "prioridad": "PRIORIDAD",
+            "descripcion": "DESCRIPCIÓN",
+            "estado": "ESTADO",
+        }
+        for column, text in headings.items():
+            self.tree.heading(column, text=text)
+
+        widths = {
+            "tarea": (220, W),
+            "fecha": (120, CENTER),
+            "prioridad": (100, CENTER),
+            "descripcion": (300, W),
+            "estado": (120, CENTER),
+        }
+        for column, (width, anchor) in widths.items():
+            self.tree.column(column, width=width, anchor=anchor)
+
+        self.tree.tag_configure("pendiente", background="#FFF3CD", foreground="#664D03")
+        self.tree.tag_configure("en progreso", background="#CFE2FF", foreground="#084298")
+        self.tree.tag_configure("completada", background="#D1E7DD", foreground="#0F5132")
+        self.tree.tag_configure("cancelada", background="#F8D7DA", foreground="#842029")
+
+        scrollbar = ttk.Scrollbar(tree_frame, orient=VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+        self.tree.pack(side=LEFT, fill=BOTH, expand=YES)
+        scrollbar.pack(side=RIGHT, fill=Y)
+
+        self.tree.bind("<Double-1>", self._open_task_from_row)
+
+    def refresh(self):
+        self.show_tasks(self.selected_state)
 
     def show_tasks(self, selected_state=None):
         if selected_state is None:
             selected_state = self.selected_state
         self.selected_state = selected_state
 
-        if self.task_notebook:
-            self.task_notebook.destroy()
+        self.tasks = self.controller.get_tasks()[1]
+        self._update_filter_buttons()
 
-        self.header, tasks = self.controller.get_tasks()
-        columns = [
-            {"text": "ID", "width": 0, "minwidth": 0, "stretch": False},
-            {"text": self.header[0], "width": 180, "minwidth": 100, "stretch": True},
-            {"text": self.header[1], "width": 130, "minwidth": 95, "stretch": True},
-            {"text": self.header[2], "width": 110, "minwidth": 80, "stretch": True},
-            {"text": self.header[3], "width": 260, "minwidth": 120, "stretch": True},
-            {"text": self.header[4], "width": 130, "minwidth": 95, "stretch": True},
-        ]
-        self.task_notebook = ttk.Notebook(self.container, bootstyle="primary")
-        self.task_notebook.grid(row=3, column=0, columnspan=2, pady=10, sticky="nsew")
-        self.task_tables = {}
-        self.task_pages = {}
-
-        states = (
-            ("Todas", None),
-            ("Pendientes", "Pendiente"),
-            ("En progreso", "En progreso"),
-            ("Completadas", "Completada"),
-            ("Canceladas", "Cancelada"),
-        )
-        for label, status in states:
-            page = ttk.Frame(self.task_notebook, padding=4)
-            page.grid_columnconfigure(0, weight=1)
-            page.grid_rowconfigure(0, weight=1)
-            self.task_notebook.add(page, text=label)
-            self.task_pages[label] = page
-
-            visible_tasks = tasks if status is None else [
-                task for task in tasks if task["status"] == status
-            ]
-            rowdata = [tuple(task) for task in visible_tasks]
-            table = Tableview(
-                page,
-                coldata=columns,
-                rowdata=rowdata,
-                bootstyle="primary",
-                autofit=False,
-                autoalign=True,
-                paginated=True,
-                yscrollbar=True,
-                iid_field=0,
+        for key, button in self.filter_buttons.items():
+            button.configure(
+                bootstyle="primary" if key == selected_state else "secondary-outline"
             )
-            table.tablecolumns[0].hide()
-            table.grid(row=0, column=0, sticky="nsew")
-            table.view.bind(
-                "<Button-1>",
-                lambda event, current_table=table: self._open_task_from_row(
-                    event, current_table
-                ),
-                add="+",
+
+        self._populate_tree()
+
+    def _update_filter_buttons(self):
+        counts = {"Todas": len(self.tasks)}
+        for task in self.tasks:
+            status = task["status"] or "Pendiente"
+            counts[status] = counts.get(status, 0) + 1
+        for key, button in self.filter_buttons.items():
+            button.configure(text=f"{self.state_labels[key]} ({counts.get(key, 0)})")
+        self.count_label.configure(text=f"{len(self.tasks)} tarea(s) registrada(s)")
+
+    def _on_search(self):
+        self.search_text = self.search_var.get().strip().lower()
+        self._populate_tree()
+
+    def _populate_tree(self):
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        for task in self.tasks:
+            status = task["status"] or "Pendiente"
+            if self.selected_state != "Todas" and status != self.selected_state:
+                continue
+            searchable = f"{task['tarea'] or ''} {task['descripcion'] or ''}".lower()
+            if self.search_text and self.search_text not in searchable:
+                continue
+
+            values = (
+                task["tarea"] or "",
+                task["fecha"] or "",
+                task["prioridad"] or "",
+                task["descripcion"] or "",
+                status,
             )
-            self.task_tables[label] = table
+            self.tree.insert(
+                "",
+                END,
+                iid=str(task["id_task"]),
+                values=values,
+                tags=(status.lower(),),
+            )
 
-        self.task_notebook.bind("<<NotebookTabChanged>>", self._on_task_tab_changed, add="+")
-        if selected_state not in self.task_pages:
-            selected_state = "Todas"
-        self.task_notebook.select(self.task_pages[selected_state])
-        self.selected_state = selected_state
+    def _selected_task_id(self):
+        selection = self.tree.selection()
+        if not selection:
+            Messagebox.show_warning(
+                "Selecciona una tarea de la tabla.",
+                title="Sin selección",
+                parent=self,
+            )
+            return None
+        return int(selection[0])
 
-    def _on_task_tab_changed(self, _event=None):
-        if self.task_notebook:
-            selected_tab = self.task_notebook.select()
-            if selected_tab:
-                self.selected_state = self.task_notebook.tab(selected_tab, "text")
+    def _edit_selected_task(self):
+        task_id = self._selected_task_id()
+        if task_id is not None:
+            self._open_task_form(task_id)
+
+    def _delete_selected_task(self):
+        task_id = self._selected_task_id()
+        if task_id is None:
+            return
+        self._confirm_delete_task(task_id)
 
     def agregar_tarea(self):
         self._open_task_form()
 
-    def _open_task_from_row(self, event, task_table):
-        table = task_table.view
-        if table.identify_region(event.x, event.y) != "cell":
+    def _open_task_from_row(self, event):
+        region = self.tree.identify_region(event.x, event.y)
+        if region != "cell":
             return
-
-        iid = table.identify_row(event.y)
+        iid = self.tree.identify_row(event.y)
         if not iid:
             return
-
         self._open_task_form(int(iid))
-        return "break"
 
     def _open_task_form(self, task_id=None):
         task = self.controller.get_task(task_id) if task_id is not None else None
         if task_id is not None and task is None:
-            self.show_tasks()
+            self.refresh()
             return
 
         editing = task is not None
@@ -204,7 +321,9 @@ class TodoView(ttk.Frame):
                 bootstyle="danger",
                 command=lambda: self._delete_task_from_form(dialog, task_id),
             ).pack(side="left")
-        ttk.Button(actions, text="Cancelar", command=dialog.destroy).pack(side="right", padx=(8, 0))
+        ttk.Button(actions, text="Cancelar", command=dialog.destroy).pack(
+            side="right", padx=(8, 0)
+        )
         ttk.Button(
             actions,
             text="Guardar cambios" if editing else "Crear tarea",
@@ -246,21 +365,29 @@ class TodoView(ttk.Frame):
             return
 
         dialog.destroy()
-        self.show_tasks("Pendientes" if task_id is None else task["estado"])
+        self.show_tasks("Pendiente" if task_id is None else task["estado"])
 
     def _delete_task_from_form(self, dialog, task_id):
+        if self._confirm_delete_task(task_id):
+            dialog.destroy()
+
+    def _confirm_delete_task(self, task_id):
         task = self.controller.get_task(task_id)
         if task is None:
-            dialog.destroy()
-            self.show_tasks(self.selected_state)
-            return
+            self.refresh()
+            return False
         confirmed = Messagebox.okcancel(
             f"¿Eliminar la tarea «{task['tarea']}»?",
             title="Eliminar tarea",
             alert=True,
             parent=self.winfo_toplevel(),
         )
-        if confirmed == "OK":
+        if confirmed != "OK":
+            return False
+        try:
             self.controller.delete_task(task_id)
-            dialog.destroy()
-            self.show_tasks(self.selected_state)
+        except Exception as error:
+            Messagebox.show_error(str(error), title="No se pudo eliminar", parent=self)
+            return False
+        self.refresh()
+        return True

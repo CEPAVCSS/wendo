@@ -1,176 +1,457 @@
-from re import sub
-
 import ttkbootstrap as ttk
-from ttkbootstrap.widgets import Tableview
+from ttkbootstrap.constants import (
+    BOTH,
+    CENTER,
+    E,
+    END,
+    LEFT,
+    RIGHT,
+    VERTICAL,
+    W,
+    X,
+    Y,
+    YES,
+)
+from ttkbootstrap.dialogs import Messagebox
+
+from controllers.providers_controller import ProvidersController
+from models.providers_model import DuplicateProviderError
 from utils.utils import Utils
-from controllers.providers_controller import *
-from ttkbootstrap.constants import *
-from ttkbootstrap.widgets import DateEntry
+
+
 class ProvidersView(ttk.Frame):
     def __init__(self, master):
         super().__init__(master, padding=8)
+        self.pack(fill=BOTH, expand=YES)
         self.master = master
         self.controller = ProvidersController(master)
-        
-        self.container = ttk.Frame(master, padding=8).pack(side="left", fill="y")
+        self.providers = []
+        self.current_type = "Todos"
+        self.search_text = ""
+        self.filter_buttons = {}
 
-        self.container.rowconfigure(2, weight=1)
-        self.container.columnconfigure(0, weight=1)
-
+        self.container = ttk.Frame(self, padding=8)
+        self.container.pack(side=LEFT, fill=Y)
         self.App_title = "Proveedores"
-        ttk.Label(self.container, text=self.App_title, font=("Helvetica", 16, "bold")).pack(pady=10)
-        ttk.Button(self.container, text="Agregar Proveedor", bootstyle="@neutral", command=lambda: self.agregar_proveedor(self.master)).pack(pady=2)
-        # ttk.Button(self.container, text="Ver Proveedores", bootstyle="@neutral").pack(pady=2)
+        ttk.Label(
+            self.container,
+            text=self.App_title,
+            font=("Helvetica", 16, "bold"),
+        ).pack(pady=10)
+        self.count_label = ttk.Label(
+            self.container,
+            text="",
+            font=("Helvetica", 9),
+            bootstyle="secondary",
+        )
+        self.count_label.pack(pady=(0, 8))
 
-        self.show_providers()
+        ttk.Button(
+            self.container,
+            text="Agregar Proveedor",
+            bootstyle="primary",
+            command=self.agregar_proveedor,
+        ).pack(pady=4, fill=X)
+        ttk.Button(
+            self.container,
+            text="Ver Proveedores",
+            bootstyle="outline-secondary",
+            command=self.refresh,
+        ).pack(pady=4, fill=X)
+        ttk.Button(
+            self.container,
+            text="Eliminar Proveedor",
+            bootstyle="outline-danger",
+            command=self._delete_provider,
+        ).pack(pady=4, fill=X)
+
+        self.main_area = ttk.Frame(self, padding=12)
+        self.main_area.pack(side=RIGHT, fill=BOTH, expand=YES)
+
+        self.setup_filters()
+        self.setup_treeview()
+        self.refresh()
+
+    def setup_filters(self):
+        filter_frame = ttk.Frame(self.main_area, padding=(0, 0, 0, 10))
+        filter_frame.pack(fill=X)
+
+        ttk.Label(
+            filter_frame,
+            text="FILTROS:",
+            font=("Helvetica", 9, "bold"),
+            bootstyle="secondary",
+        ).pack(side=LEFT, padx=(0, 10))
+
+        provider_types = (
+            ("Todos", "Todos"),
+            ("Ordinario", "Ordinario"),
+            ("Especial", "Especial"),
+            ("Formal", "Formal"),
+            ("No Sujeto", "No Sujeto"),
+        )
+        for key, label in provider_types:
+            button = ttk.Button(
+                filter_frame,
+                text=label,
+                bootstyle="primary" if key == "Todos" else "secondary-outline",
+                command=lambda current=key: self._set_type(current),
+            )
+            button.pack(side=LEFT, padx=2)
+            self.filter_buttons[key] = button
+
+        ttk.Label(filter_frame, text="Buscar:", bootstyle="secondary").pack(
+            side=RIGHT, padx=(10, 4)
+        )
+        self.search_var = ttk.StringVar()
+        self.search_var.trace_add("write", lambda *_args: self._on_search())
+        ttk.Entry(
+            filter_frame,
+            textvariable=self.search_var,
+            bootstyle="light",
+            width=24,
+        ).pack(side=RIGHT)
+
+    def setup_treeview(self):
+        tree_frame = ttk.Frame(self.main_area)
+        tree_frame.pack(fill=BOTH, expand=YES)
+
+        columns = ("rif", "razon", "tipo", "contacto", "telefono", "email", "estado", "ciudad")
+        self.tree = ttk.Treeview(
+            tree_frame,
+            columns=columns,
+            show="headings",
+            bootstyle="light",
+        )
+
+        headings = {
+            "rif": "RIF",
+            "razon": "RAZÓN SOCIAL",
+            "tipo": "TIPO",
+            "contacto": "CONTACTO",
+            "telefono": "TELÉFONO",
+            "email": "CORREO",
+            "estado": "ESTADO",
+            "ciudad": "CIUDAD",
+        }
+        for column, text in headings.items():
+            self.tree.heading(column, text=text)
+
+        widths = {
+            "rif": (120, W),
+            "razon": (220, W),
+            "tipo": (110, CENTER),
+            "contacto": (160, W),
+            "telefono": (130, W),
+            "email": (200, W),
+            "estado": (120, CENTER),
+            "ciudad": (130, W),
+        }
+        for column, (width, anchor) in widths.items():
+            self.tree.column(column, width=width, anchor=anchor)
+
+        self.tree.tag_configure("ordinario", background="#D1E7DD", foreground="#0F5132")
+        self.tree.tag_configure("especial", background="#CFE2FF", foreground="#084298")
+        self.tree.tag_configure("formal", background="#FFF3CD", foreground="#664D03")
+        self.tree.tag_configure("no sujeto", background="#E2E3E5", foreground="#41464B")
+
+        scrollbar = ttk.Scrollbar(tree_frame, orient=VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+        self.tree.pack(side=LEFT, fill=BOTH, expand=YES)
+        scrollbar.pack(side=RIGHT, fill=Y)
+
+    def _set_type(self, provider_type):
+        self.current_type = provider_type
+        for key, button in self.filter_buttons.items():
+            button.configure(
+                bootstyle="primary" if key == provider_type else "secondary-outline"
+            )
+        self._populate_tree()
+
+    def _on_search(self):
+        self.search_text = self.search_var.get().strip().lower()
+        self._populate_tree()
+
+    def refresh(self):
+        self.providers = self.controller.get_providers()
+        self._update_filter_buttons()
+        self._populate_tree()
+
+    def _update_filter_buttons(self):
+        counts = {"Todos": len(self.providers)}
+        for provider in self.providers:
+            provider_type = provider["provider_type"] or "No Sujeto"
+            counts[provider_type] = counts.get(provider_type, 0) + 1
+        for key, button in self.filter_buttons.items():
+            button.configure(text=f"{key} ({counts.get(key, 0)})")
+        self.count_label.configure(
+            text=f"{len(self.providers)} proveedor(es) registrado(s)"
+        )
+
+    def _populate_tree(self):
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        for provider in self.providers:
+            provider_type = provider["provider_type"] or "No Sujeto"
+            if self.current_type != "Todos" and provider_type != self.current_type:
+                continue
+            searchable = " ".join(
+                str(provider[field] or "")
+                for field in (
+                    "reason",
+                    "rif_prefix",
+                    "rif_number",
+                    "conatct_name",
+                    "contact_email",
+                    "state",
+                    "city",
+                )
+            ).lower()
+            if self.search_text and self.search_text not in searchable:
+                continue
+
+            rif = "".join(
+                part for part in (provider["rif_prefix"], provider["rif_number"]) if part
+            )
+            values = (
+                rif,
+                provider["reason"] or "",
+                provider_type,
+                provider["conatct_name"] or "",
+                provider["contact_phone"] or "",
+                provider["contact_email"] or "",
+                provider["state"] or "",
+                provider["city"] or "",
+            )
+            self.tree.insert(
+                "",
+                END,
+                iid=str(provider["id_provider"]),
+                values=values,
+                tags=(provider_type.lower(),),
+            )
+
+    def _delete_provider(self):
+        selection = self.tree.selection()
+        if not selection:
+            Messagebox.show_warning(
+                "Selecciona un proveedor de la tabla.",
+                title="Sin selección",
+                parent=self,
+            )
+            return
+        provider = self.controller.get_provider(int(selection[0]))
+        if provider is None:
+            self.refresh()
+            return
+        confirmed = Messagebox.okcancel(
+            f"¿Eliminar el proveedor «{provider['reason']}»?",
+            title="Eliminar proveedor",
+            alert=True,
+            parent=self,
+        )
+        if confirmed != "OK":
+            return
+        try:
+            self.controller.delete_provider(provider["id_provider"])
+        except Exception as error:
+            Messagebox.show_error(str(error), title="No se pudo eliminar", parent=self)
+            return
+        self.refresh()
 
     def agregar_proveedor(self, master=None):
+        dialog = ttk.Toplevel(title="Agregar Proveedor")
+        dialog.geometry("760x600")
+        dialog.minsize(680, 540)
+        Utils.center_window(dialog)
+        dialog.transient(self.winfo_toplevel())
+        dialog.grab_set()
 
-    #---Ventana emergente para agregar un proveedor---#
-        ventana_agregar = ttk.Toplevel(master)
-        ventana_agregar.title("Formulario de Agregar Proveedor")
-        ventana_agregar.geometry("850x550")
-        Utils.center_window(ventana_agregar)
-        
-        #---Sección de Información del Proveedor---#
+        ttk.Label(
+            dialog,
+            text="Formulario de Proveedor",
+            font=("Helvetica", 16, "bold"),
+        ).pack(pady=(14, 8))
 
-        ttk.Label(ventana_agregar, text="Formulario de Proveedor", font=("Helvetica", 16, "bold")).pack(pady=10)
+        form = ttk.Labelframe(dialog, text="Información del Proveedor", padding=15)
+        form.pack(fill="both", expand=True, padx=15, pady=(0, 12))
+        form.columnconfigure((0, 1), weight=1, uniform="col")
 
+        self.rif_prefix = ttk.StringVar(value="J")
+        self.rif_number = ttk.StringVar()
+        self.reason = ttk.StringVar()
+        self.provider_type = ttk.StringVar(value="Ordinario")
+        self.contact_name = ttk.StringVar()
+        self.contact_phone = ttk.StringVar()
+        self.contact_email = ttk.StringVar()
+        self.state = ttk.StringVar()
+        self.city = ttk.StringVar()
 
-        labelframe_contacto = ttk.Labelframe(ventana_agregar, text="Información del Proveedor", padding=15)
-        labelframe_contacto.pack(fill="both", expand=True, padx=15, pady=10)
+        rif_frame = ttk.Frame(form)
+        rif_frame.grid(row=0, column=0, sticky="ew", padx=(0, 8), pady=5)
+        ttk.Label(
+            rif_frame,
+            text="RIF (Registro de Información Fiscal)",
+            font=("Helvetica", 9, "bold"),
+        ).pack(anchor="w")
+        rif_row = ttk.Frame(rif_frame)
+        rif_row.pack(fill=X, pady=(3, 0))
+        ttk.Combobox(
+            rif_row,
+            textvariable=self.rif_prefix,
+            values=("V", "J", "E", "G", "C"),
+            width=3,
+            state="readonly",
+        ).pack(side=LEFT, padx=(0, 5))
+        ttk.Entry(rif_row, textvariable=self.rif_number).pack(
+            side=LEFT, fill=X, expand=True
+        )
 
-        fila_1 = ttk.Frame(labelframe_contacto)
-        fila_1.pack(fill="x", pady=(0, 5))
+        reason_frame = ttk.Frame(form)
+        reason_frame.grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=5)
+        ttk.Label(
+            reason_frame,
+            text="Razón Social / Nombre Completo",
+            font=("Helvetica", 9, "bold"),
+        ).pack(anchor="w")
+        ttk.Entry(reason_frame, textvariable=self.reason).pack(
+            fill=X, pady=(3, 0)
+        )
 
-        fila_2 = ttk.Frame(labelframe_contacto)
-        fila_2.pack(fill="x", pady=(0, 5))
+        type_frame = ttk.Frame(form)
+        type_frame.grid(row=1, column=0, sticky="ew", padx=(0, 8), pady=5)
+        ttk.Label(
+            type_frame,
+            text="Tipo de Contribuyente (SENIAT)",
+            font=("Helvetica", 9, "bold"),
+        ).pack(anchor="w")
+        ttk.Combobox(
+            type_frame,
+            textvariable=self.provider_type,
+            values=("Ordinario", "Especial", "Formal", "No Sujeto"),
+            state="readonly",
+        ).pack(fill=X, pady=(3, 0))
 
-        fila_3 = ttk.Frame(labelframe_contacto)
-        fila_3.pack(fill="x", pady=(0, 5))
+        contact_frame = ttk.Frame(form)
+        contact_frame.grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=5)
+        ttk.Label(
+            contact_frame,
+            text="Persona de Contacto",
+            font=("Helvetica", 9, "bold"),
+        ).pack(anchor="w")
+        ttk.Entry(contact_frame, textvariable=self.contact_name).pack(
+            fill=X, pady=(3, 0)
+        )
 
-        fila_4 = ttk.Frame(labelframe_contacto)
-        fila_4.pack(fill="x", pady=(0, 5))
-
-        for fila in (fila_1, fila_2, fila_3, fila_4):
-            fila.columnconfigure((0, 1), weight=1, uniform="col")
-
-        posicion_botones = ttk.Frame(ventana_agregar)
-        posicion_botones.pack(pady=15,)
-
-        
-# Campos de Datos del Proveedor.
-
-
-        #---Columna Izquierda (RIF, Razón Social, Tipo de Contribuyente, Estado)---#
-
-        columna_registro = ttk.Frame(fila_1)
-        columna_registro.grid(row=0, column=0, sticky="ew", padx=(0, 5))
-        ttk.Label(columna_registro, text="RIF (Registro de Información Fiscal)", font=("Helvetica", 9, "bold")).pack(anchor="w", pady=(5, 0))
-
-        fila_rif = ttk.Frame(columna_registro)
-        fila_rif.pack(anchor="w", fill="x", pady=(0, 8))
-
-        combox_rif_tipo = ttk.Combobox(fila_rif, values=["V", "J", "E", "G", "C"], width=3, state="readonly")
-        combox_rif_tipo.pack(side="left", padx=(0, 5))
-
-        entry_rif = ttk.Entry(fila_rif, width=40)
-        entry_rif.pack(side="left", fill="x", expand=True)
-
-        columna_Razón_Social = ttk.Frame(fila_2)
-        columna_Razón_Social.grid(row=0, column=0, sticky="ew", padx=(0, 5))
-        ttk.Label(columna_Razón_Social, text="Razón Social / Nombre Completo", font=("Helvetica", 9, "bold")).pack(anchor="w", pady=(5, 0))
-        ttk.Entry(columna_Razón_Social, width=40).pack(anchor="w", fill="x", pady=(0, 8))
-
-        columna_contrib = ttk.Frame(fila_3)
-        columna_contrib.grid(row=0, column=0, sticky="ew", padx=(0, 5))
-        ttk.Label(columna_contrib, text="Tipo de Contribuyente (SENIAT)", font=("Helvetica", 9, "bold")).pack(anchor="w", pady=(5, 0))
-        combo_contrib = ttk.Combobox(columna_contrib, values=["Ordinario", "Especial", "Formal", "No Sujeto"], state="readonly")
-        combo_contrib.pack(anchor="w", fill="x", pady=(0, 8))
-
-        columna_estado = ttk.Frame(fila_4)
-        columna_estado.grid(row=0, column=0, sticky="ew", padx=(0, 5))
-        ttk.Label(columna_estado, text="Estado / Región", font=("Helvetica", 9, "bold")).pack(anchor="w", pady=(5, 0))
-        combo_estado = ttk.Combobox(columna_estado, values=["Distrito Capital", "Miranda", "Zulia", "Aragua", "Carabobo", "Lara", "Aragua", "Anzoátegui", "Yaracuy", "Bolívar", "Trujillo", "Táchira", "Nueva Esparta", "Sucre", "Portuguesa", "Mérida", "Amazonas", "Apure", "Barinas", "Cojedes", "Delta Amacuro", "Falcón", "Guárico", "Monagas", "La Guaira", "Otros"], state="readonly")
-        combo_estado.pack(anchor="w", fill="x", pady=(0, 8))
-
-        #---Quitar la selección de los combobox al hacer clic en otro lugar---#
-        for combo in (combox_rif_tipo, combo_contrib, combo_estado):
-            combo.bind("<<ComboboxSelected>>", lambda e: e.widget.selection_clear())
-
-        #---Columna Derecha (Telefono, Correo, Persona de Contacto, Dirección Fiscal)---#
-
-        columna_telefono = ttk.Frame(fila_1)
-        columna_telefono.grid(row=0, column=1, sticky="ew", padx=(5, 0))
-        ttk.Label(columna_telefono, text="Teléfono:", font=("Helvetica", 9, "bold")).pack(anchor="w", pady=(5, 0))
-
-        #---Validación solo números y simbolos---#
-        def solo_numeros_y_simbolos(texto):
-            return all(c.isdigit() or c in "-+# " for c in texto)
-
-        validar_telefono = ventana_agregar.register(solo_numeros_y_simbolos)
-
-        entry_telefono = ttk.Entry(columna_telefono, width=40, validate="key", validatecommand=(validar_telefono, "%P"))
-        entry_telefono.pack(anchor="w", fill="x", pady=(0, 8))
-
-    #---------------------------------------------------------------#
-
-        columna_Correo = ttk.Frame(fila_2)
-        columna_Correo.grid(row=0, column=1, sticky="ew", padx=(5, 0))
-        ttk.Label(columna_Correo, text="Correo Electrónico:", font=("Helvetica", 9, "bold")).pack(anchor="w", pady=(5, 0))
-        ttk.Entry(columna_Correo, width=40).pack(anchor="w", fill="x", pady=(0, 8))
-
-        columna_contacto = ttk.Frame(fila_3)
-        columna_contacto.grid(row=0, column=1, sticky="ew", padx=(5, 0))
-        ttk.Label(columna_contacto, text="Persona de Contacto:", font=("Helvetica", 9, "bold")).pack(anchor="w", pady=(5, 0))
-        ttk.Entry(columna_contacto, width=40).pack(anchor="w", fill="x", pady=(0, 8))
-
-        columna_Direccion = ttk.Frame(fila_4)
-        columna_Direccion.grid(row=0, column=1, sticky="ew", padx=(5, 0))
-        ttk.Label(columna_Direccion, text="Dirección Fiscal Detallada", font=("Helvetica", 9, "bold")).pack(anchor="w", pady=(5, 0))
-        ttk.Entry(columna_Direccion, width=40).pack(anchor="w", fill="x", pady=(0, 8))
-
-        #---Sección Inferior (Fecha de Registro y Botones)---#
-
-        seccion_inferior = ttk.Frame(ventana_agregar)
-        seccion_inferior.pack(fill="x", padx=15, pady=(5, 15))
-
-        #---Fecha de Registro---#
-        frame_fecha = ttk.Frame(seccion_inferior)
-        frame_fecha.pack(side="left")
-        ttk.Label(frame_fecha, text="Fecha de Registro:", font=("Helvetica", 9, "italic")).pack(side="left", padx=(0, 8))
-        date_entry = DateEntry(frame_fecha, bootstyle="success", width=12)
-        date_entry.pack(side="left")
-
-        #---Botones (Guardar y Cancelar)---#
-        posicion_botones = ttk.Frame(seccion_inferior)
-        posicion_botones.pack(side="right")
-
-        boton_guardar = ttk.Button(posicion_botones, text="Guardar Proveedor", bootstyle="success", command=ventana_agregar.destroy)
-        boton_guardar.pack(side="left", padx=(0, 8))
-
-        boton_cancelar = ttk.Button(posicion_botones, text="Cancelar", bootstyle="danger-outline", command=ventana_agregar.destroy)
-        boton_cancelar.pack(side="left")
-
-        #---Configuración de la ventana emergente---#
-        ventana_agregar.resizable(False, False)
-
-
-
-    def show_providers(self):
-
-        headers, proveedores = self.controller.providers
-
-        if not proveedores:
-            ttk.Label(self.container, text="No hay proveedores disponibles.", font=("Helvetica", 12)).pack(pady=10)
-        else:   
-            tabla_proveedores = Tableview(self.container, 
-                                          coldata=headers,
-                                          rowdata=proveedores,
-                                          bootstyle="info",
-                                          autofit=True,
-                                          autoalign=True,
-                                          paginated=True,
-                                          searchable=True,)
+        phone_frame = ttk.Frame(form)
+        phone_frame.grid(row=2, column=0, sticky="ew", padx=(0, 8), pady=5)
+        ttk.Label(
+            phone_frame,
+            text="Teléfono",
+            font=("Helvetica", 9, "bold"),
+        ).pack(anchor="w")
+        validator = dialog.register(
+           lambda texto: len(texto) <= 20
+            and all(c.isdigit() or c in "-+# " for c in texto)
+        )
+        ttk.Entry(
+            phone_frame,
+            textvariable=self.contact_phone,
+            validate="key",
+            validatecommand=(validator, "%P")
             
-            tabla_proveedores.pack(pady=10)
+        ).pack(fill=X, pady=(3, 0))
+
+        email_frame = ttk.Frame(form)
+        email_frame.grid(row=2, column=1, sticky="ew", padx=(8, 0), pady=5)
+        ttk.Label(
+            email_frame,
+            text="Correo Electrónico",
+            font=("Helvetica", 9, "bold"),
+        ).pack(anchor="w")
+        ttk.Entry(email_frame, textvariable=self.contact_email).pack(
+            fill=X, pady=(3, 0)
+        )
+
+        states = (
+            "Distrito Capital", "Miranda", "Zulia", "Aragua", "Carabobo", "Lara",
+            "Anzoátegui", "Yaracuy", "Bolívar", "Trujillo", "Táchira",
+            "Nueva Esparta", "Sucre", "Portuguesa", "Mérida", "Amazonas",
+            "Apure", "Barinas", "Cojedes", "Delta Amacuro", "Falcón",
+            "Guárico", "Monagas", "La Guaira", "Otros",
+        )
+        state_frame = ttk.Frame(form)
+        state_frame.grid(row=3, column=0, sticky="ew", padx=(0, 8), pady=5)
+        ttk.Label(
+            state_frame,
+            text="Estado / Región",
+            font=("Helvetica", 9, "bold"),
+        ).pack(anchor="w")
+        ttk.Combobox(
+            state_frame,
+            textvariable=self.state,
+            values=states,
+            state="readonly",
+        ).pack(fill=X, pady=(3, 0))
+
+        city_frame = ttk.Frame(form)
+        city_frame.grid(row=3, column=1, sticky="ew", padx=(8, 0), pady=5)
+        ttk.Label(
+            city_frame,
+            text="Ciudad",
+            font=("Helvetica", 9, "bold"),
+        ).pack(anchor="w")
+        ttk.Entry(city_frame, textvariable=self.city).pack(fill=X, pady=(3, 0))
+
+        ttk.Label(
+            form,
+            text="Dirección Fiscal Detallada",
+            font=("Helvetica", 9, "bold"),
+        ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        address = ttk.Text(form, height=3, wrap="word")
+        address.grid(row=5, column=0, columnspan=2, sticky="ew", pady=(3, 0))
+
+        actions = ttk.Frame(dialog)
+        actions.pack(fill=X, padx=15, pady=(0, 15))
+        ttk.Button(
+            actions,
+            text="Guardar Proveedor",
+            bootstyle="success",
+            command=lambda: self._save_provider(dialog, address),
+        ).pack(side=RIGHT)
+        ttk.Button(
+            actions,
+            text="Cancelar",
+            bootstyle="danger-outline",
+            command=dialog.destroy,
+        ).pack(side=RIGHT, padx=(0, 8))
+
+    def _save_provider(self, dialog, address):
+        provider = {
+            "rif_prefix": self.rif_prefix.get().strip(),
+            "rif_number": self.rif_number.get().strip(),
+            "reason": self.reason.get().strip(),
+            "provider_type": self.provider_type.get().strip(),
+            "conatct_name": self.contact_name.get().strip(),
+            "contact_phone": self.contact_phone.get().strip(),
+            "contact_email": self.contact_email.get().strip(),
+            "state": self.state.get().strip(),
+            "city": self.city.get().strip(),
+            "address": address.get("1.0", "end-1c").strip(),
+        }
+        try:
+            self.controller.add_provider(provider)
+        except (ValueError, DuplicateProviderError) as error:
+            Messagebox.show_warning(str(error), title="Revisa los datos", parent=dialog)
+            return
+        except Exception as error:
+            Messagebox.show_error(
+                f"No fue posible guardar el proveedor.\n\n{error}",
+                title="No se pudo guardar",
+                parent=dialog,
+            )
+            return
+
+        dialog.destroy()
+        self.refresh()

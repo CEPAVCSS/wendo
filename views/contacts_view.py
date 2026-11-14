@@ -1,85 +1,276 @@
 import ttkbootstrap as ttk
-from tkinter import messagebox
-from ttkbootstrap.widgets import Tableview
+from ttkbootstrap.constants import (
+    BOTH,
+    CENTER,
+    END,
+    LEFT,
+    RIGHT,
+    VERTICAL,
+    W,
+    X,
+    Y,
+    YES,
+)
+from ttkbootstrap.dialogs import Messagebox
 
 from controllers.contacts_controller import ContactsController
 from models.contacts_model import DuplicateContactError
 
+
 class ContactsView(ttk.Frame):
     def __init__(self, master):
         super().__init__(master, padding=8)
-        self.pack(fill="both", expand=True)
+        self.pack(fill=BOTH, expand=YES)
         self.controller = ContactsController()
-        self.contacts_table = None
-        self.empty_label = None
+        self.contacts = []
+        self.current_segment = "Todos"
+        self.search_text = ""
+        self.filter_buttons = {}
 
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(2, weight=1)
-
-        heading = ttk.Frame(self)
-        heading.grid(row=0, column=0, sticky="ew", pady=(4, 2))
-        heading.grid_columnconfigure(0, weight=1)
+        self.container = ttk.Frame(self, padding=8)
+        self.container.pack(side=LEFT, fill=Y)
+        self.App_title = "Contactos"
         ttk.Label(
-            heading,
-            text="Contactos",
-            font=("Helvetica", 20, "bold"),
-        ).grid(row=0, column=0, sticky="w")
+            self.container,
+            text=self.App_title,
+            font=("Helvetica", 16, "bold"),
+        ).pack(pady=10)
+        self.count_label = ttk.Label(
+            self.container,
+            text="",
+            font=("Helvetica", 9),
+            bootstyle="secondary",
+        )
+        self.count_label.pack(pady=(0, 8))
+
         ttk.Button(
-            heading,
-            text="Agregar contacto",
+            self.container,
+            text="Agregar Contacto",
             bootstyle="primary",
             command=self.open_contact_form,
-        ).grid(row=0, column=1, sticky="e")
+        ).pack(pady=4, fill=X)
+        ttk.Button(
+            self.container,
+            text="Ver Contactos",
+            bootstyle="outline-secondary",
+            command=self.refresh,
+        ).pack(pady=4, fill=X)
+        ttk.Button(
+            self.container,
+            text="Eliminar Contacto",
+            bootstyle="outline-danger",
+            command=self._delete_contact,
+        ).pack(pady=4, fill=X)
+
+        self.main_area = ttk.Frame(self, padding=12)
+        self.main_area.pack(side=RIGHT, fill=BOTH, expand=YES)
+
+        self.setup_filters()
+        self.setup_treeview()
+        self.refresh()
+
+    def setup_filters(self):
+        filter_frame = ttk.Frame(self.main_area, padding=(0, 0, 0, 10))
+        filter_frame.pack(fill=X)
 
         ttk.Label(
-            self,
-            text="Directorio de clientes y personas de contacto",
-            font=("Helvetica", 10),
-        ).grid(row=1, column=0, sticky="w", pady=(0, 10))
+            filter_frame,
+            text="FILTROS:",
+            font=("Helvetica", 9, "bold"),
+            bootstyle="secondary",
+        ).pack(side=LEFT, padx=(0, 10))
 
-        self.show_contacts()
-
-    def show_contacts(self):
-        if self.contacts_table:
-            self.contacts_table.destroy()
-            self.contacts_table = None
-        if self.empty_label:
-            self.empty_label.destroy()
-            self.empty_label = None
-
-        contacts = self.controller.get_contacts()
-        if not contacts:
-            self.empty_label = ttk.Label(
-                self,
-                text="Aún no hay contactos. Agrega el primero para comenzar.",
-                anchor="center",
-                bootstyle="secondary",
-            )
-            self.empty_label.grid(row=2, column=0, sticky="nsew", pady=24)
-            return
-
-        columns = [
-            {"text": "Nombre o razón social", "width": 190, "minwidth": 130, "stretch": True},
-            {"text": "Cédula / RIF", "width": 130, "minwidth": 100, "stretch": True},
-            {"text": "Teléfono", "width": 125, "minwidth": 95, "stretch": True},
-            {"text": "Correo electrónico", "width": 200, "minwidth": 130, "stretch": True},
-            {"text": "Estado", "width": 100, "minwidth": 80, "stretch": True},
-            {"text": "Segmento", "width": 120, "minwidth": 90, "stretch": True},
-            {"text": "Contacto principal", "width": 175, "minwidth": 120, "stretch": True},
-            {"text": "Dirección", "width": 220, "minwidth": 140, "stretch": True},
-        ]
-        self.contacts_table = Tableview(
-            self,
-            coldata=columns,
-            rowdata=[tuple(contact) for contact in contacts],
-            bootstyle="primary",
-            autofit=False,
-            autoalign=True,
-            paginated=True,
-            searchable=True,
-            yscrollbar=True,
+        segments = (
+            ("Todos", "Todos"),
+            ("Natural", "Natural"),
+            ("Corporativo", "Corporativo"),
+            ("Mayorista", "Mayorista"),
+            ("PYME", "PYME"),
+            ("Otro", "Otro"),
         )
-        self.contacts_table.grid(row=2, column=0, sticky="nsew")
+        for key, label in segments:
+            button = ttk.Button(
+                filter_frame,
+                text=label,
+                bootstyle="primary" if key == "Todos" else "secondary-outline",
+                command=lambda current=key: self._set_segment(current),
+            )
+            button.pack(side=LEFT, padx=2)
+            self.filter_buttons[key] = button
+
+        ttk.Label(filter_frame, text="Buscar:", bootstyle="secondary").pack(
+            side=RIGHT, padx=(10, 4)
+        )
+        self.search_var = ttk.StringVar()
+        self.search_var.trace_add("write", lambda *_args: self._on_search())
+        ttk.Entry(
+            filter_frame,
+            textvariable=self.search_var,
+            bootstyle="light",
+            width=24,
+        ).pack(side=RIGHT)
+
+    def setup_treeview(self):
+        tree_frame = ttk.Frame(self.main_area)
+        tree_frame.pack(fill=BOTH, expand=YES)
+
+        columns = (
+            "nombre",
+            "cedula",
+            "telefono",
+            "email",
+            "estado",
+            "segmento",
+            "contacto",
+            "direccion",
+        )
+        self.tree = ttk.Treeview(
+            tree_frame,
+            columns=columns,
+            show="headings",
+            bootstyle="light",
+        )
+
+        headings = {
+            "nombre": "NOMBRE O RAZÓN SOCIAL",
+            "cedula": "CÉDULA / RIF",
+            "telefono": "TELÉFONO",
+            "email": "CORREO",
+            "estado": "ESTADO",
+            "segmento": "SEGMENTO",
+            "contacto": "CONTACTO PRINCIPAL",
+            "direccion": "DIRECCIÓN",
+        }
+        for column, text in headings.items():
+            self.tree.heading(column, text=text)
+
+        widths = {
+            "nombre": (210, W),
+            "cedula": (120, W),
+            "telefono": (125, W),
+            "email": (200, W),
+            "estado": (95, CENTER),
+            "segmento": (120, CENTER),
+            "contacto": (160, W),
+            "direccion": (220, W),
+        }
+        for column, (width, anchor) in widths.items():
+            self.tree.column(column, width=width, anchor=anchor)
+
+        self.tree.tag_configure("inactivo", background="#E2E3E5", foreground="#6C757D")
+        self.tree.tag_configure("natural", background="#D1E7DD", foreground="#0F5132")
+        self.tree.tag_configure("corporativo", background="#CFE2FF", foreground="#084298")
+        self.tree.tag_configure("mayorista", background="#FFF3CD", foreground="#664D03")
+        self.tree.tag_configure("pyme", background="#E2D9F3", foreground="#432874")
+        self.tree.tag_configure("otro", background="#E2E3E5", foreground="#41464B")
+
+        scrollbar = ttk.Scrollbar(tree_frame, orient=VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+        self.tree.pack(side=LEFT, fill=BOTH, expand=YES)
+        scrollbar.pack(side=RIGHT, fill=Y)
+
+    def _set_segment(self, segment):
+        self.current_segment = segment
+        for key, button in self.filter_buttons.items():
+            button.configure(
+                bootstyle="primary" if key == segment else "secondary-outline"
+            )
+        self._populate_tree()
+
+    def _on_search(self):
+        self.search_text = self.search_var.get().strip().lower()
+        self._populate_tree()
+
+    def refresh(self):
+        self.contacts = self.controller.get_contacts()
+        self._update_filter_buttons()
+        self._populate_tree()
+
+    def _update_filter_buttons(self):
+        counts = {"Todos": len(self.contacts)}
+        for contact in self.contacts:
+            segment = contact["segment"] or "Otro"
+            counts[segment] = counts.get(segment, 0) + 1
+        for key, button in self.filter_buttons.items():
+            button.configure(text=f"{key} ({counts.get(key, 0)})")
+        self.count_label.configure(
+            text=f"{len(self.contacts)} contacto(s) registrado(s)"
+        )
+
+    def _populate_tree(self):
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        for contact in self.contacts:
+            segment = contact["segment"] or "Otro"
+            if self.current_segment != "Todos" and segment != self.current_segment:
+                continue
+            searchable = " ".join(
+                str(contact[field] or "")
+                for field in (
+                    "customer_name",
+                    "cedula_rif",
+                    "phone",
+                    "email",
+                    "status",
+                    "segment",
+                    "main_contact",
+                    "address",
+                )
+            ).lower()
+            if self.search_text and self.search_text not in searchable:
+                continue
+
+            values = (
+                contact["customer_name"] or "",
+                contact["cedula_rif"] or "",
+                contact["phone"] or "",
+                contact["email"] or "",
+                contact["status"] or "",
+                segment,
+                contact["main_contact"] or "",
+                contact["address"] or "",
+            )
+            tag = (
+                "inactivo"
+                if (contact["status"] or "").strip().lower() == "inactivo"
+                else segment.lower()
+            )
+            self.tree.insert(
+                "",
+                END,
+                iid=str(contact["id_contact"]),
+                values=values,
+                tags=(tag,),
+            )
+
+    def _delete_contact(self):
+        selection = self.tree.selection()
+        if not selection:
+            Messagebox.show_warning(
+                "Selecciona un contacto de la tabla.",
+                title="Sin selección",
+                parent=self,
+            )
+            return
+        contact = self.controller.get_contact(int(selection[0]))
+        if contact is None:
+            self.refresh()
+            return
+        confirmed = Messagebox.okcancel(
+            f"¿Eliminar el contacto «{contact['customer_name']}»?",
+            title="Eliminar contacto",
+            alert=True,
+            parent=self,
+        )
+        if confirmed != "OK":
+            return
+        try:
+            self.controller.delete_contact(contact["id_contact"])
+        except Exception as error:
+            Messagebox.show_error(str(error), title="No se pudo eliminar", parent=self)
+            return
+        self.refresh()
 
     def open_contact_form(self):
         dialog = ttk.Toplevel(title="Agregar contacto")
@@ -132,6 +323,13 @@ class ContactsView(ttk.Frame):
                     values=("Natural", "Corporativo", "Mayorista", "PYME", "Otro"),
                     state="readonly",
                 ).grid(row=1, column=0, sticky="ew", pady=(3, 0))
+            elif field == "status":
+                ttk.Combobox(
+                    field_frame,
+                    textvariable=variable,
+                    values=("Activo", "Inactivo"),
+                    state="readonly",
+                ).grid(row=1, column=0, sticky="ew", pady=(3, 0))
             else:
                 ttk.Entry(field_frame, textvariable=variable).grid(
                     row=1, column=0, sticky="ew", pady=(3, 0)
@@ -146,14 +344,14 @@ class ContactsView(ttk.Frame):
         actions = ttk.Frame(body)
         actions.grid(row=2, column=0, columnspan=2, sticky="e", pady=(14, 0))
         ttk.Button(actions, text="Cancelar", command=dialog.destroy).pack(
-            side="right", padx=(8, 0)
+            side=RIGHT, padx=(8, 0)
         )
         ttk.Button(
             actions,
             text="Guardar contacto",
             bootstyle="primary",
             command=lambda: self.save_contact(dialog, address),
-        ).pack(side="right")
+        ).pack(side=RIGHT)
 
     def save_contact(self, dialog, address):
         contact = {
@@ -162,9 +360,9 @@ class ContactsView(ttk.Frame):
         }
         contact["address"] = address.get("1.0", "end-1c").strip()
         if not contact["customer_name"]:
-            messagebox.showwarning(
-                "Falta el nombre",
+            Messagebox.show_warning(
                 "Ingresa el nombre o la razón social del contacto.",
+                title="Falta el nombre",
                 parent=dialog,
             )
             return
@@ -172,19 +370,15 @@ class ContactsView(ttk.Frame):
         try:
             self.controller.add_contact(contact)
         except DuplicateContactError as error:
-            messagebox.showwarning(
-                "Dato duplicado",
-                str(error),
-                parent=dialog,
-            )
+            Messagebox.show_warning(str(error), title="Dato duplicado", parent=dialog)
             return
         except Exception as error:
-            messagebox.showerror(
-                "No se pudo guardar",
+            Messagebox.show_error(
                 f"No fue posible guardar el contacto.\n\n{error}",
+                title="No se pudo guardar",
                 parent=dialog,
             )
             return
 
         dialog.destroy()
-        self.show_contacts()
+        self.refresh()

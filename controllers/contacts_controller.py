@@ -8,5 +8,11 @@ class ContactsController:
 	def get_contacts(self):
 		return self.model.get_contacts()
 
+	def get_contact(self, contact_id):
+		return self.model.get_contact(contact_id)
+
 	def add_contact(self, contact):
 		self.model.add_contact(contact)
+
+	def delete_contact(self, contact_id):
+		self.model.delete_contact(contact_id)

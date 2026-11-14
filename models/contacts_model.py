@@ -23,10 +23,21 @@ class ContactsModel:
 		self.db = db or SQLiteConnector()
 
 	def get_contacts(self):
-		columns = ", ".join(self.fields)
+		columns = ", ".join(("id_contact",) + self.fields)
 		return self.db.fetch_all(
 			f"SELECT {columns} FROM contacts ORDER BY customer_name COLLATE NOCASE"
 		)
+
+	def get_contact(self, contact_id):
+		columns = ", ".join(("id_contact",) + self.fields)
+		rows = self.db.fetch_all(
+			f"SELECT {columns} FROM contacts WHERE id_contact = ?",
+			(contact_id,),
+		)
+		return rows[0] if rows else None
+
+	def delete_contact(self, contact_id):
+		self.db.execute("DELETE FROM contacts WHERE id_contact = ?", (contact_id,))
 
 	def add_contact(self, contact):
 		values = [str(contact.get(field) or "").strip() for field in self.fields]

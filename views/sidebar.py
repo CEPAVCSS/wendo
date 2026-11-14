@@ -70,6 +70,8 @@ class Sidebar(ttk.Frame):
         ttk.Button(self.menu, icon="cart", text="Pedidos", bootstyle="Menu.TButton", command=self.pedidos).pack( pady=2, fill="x")
         ttk.Button(self.menu, icon="check-circle", text="Tareas", bootstyle="Menu.TButton", command=self.tareas).pack(pady=2, fill="x")
 
+        self.buscar()
+
     def buscar(self):
         # Implementar la funcionalidad de búsqueda aquí
         self.limpiar_contenido()

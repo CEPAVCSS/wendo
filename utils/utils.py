@@ -1,6 +1,13 @@
+import sys
+from pathlib import Path
 
 
 class Utils:
+    @staticmethod
+    def resource_path(relative_path):
+        base_path = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
+        return base_path / relative_path
+
     @staticmethod
     def center_window(window):
         window.update_idletasks()

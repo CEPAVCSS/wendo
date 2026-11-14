@@ -64,7 +64,7 @@ class Sidebar(ttk.Frame):
     def buscar(self):
         # Implementar la funcionalidad de búsqueda aquí
         self.limpiar_contenido()
-        SV.SearchView(master=self.content)
+        SV.SearchView(master=self.content, on_clientes=self.contactos)
 
     def contactos(self):
         # Implementar la funcionalidad de búsqueda aquí

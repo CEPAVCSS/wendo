@@ -1,4 +1,5 @@
 import ttkbootstrap as ttk
+from datetime import date
 from ttkbootstrap.constants import (
     BOTH,
     CENTER,
@@ -53,9 +54,9 @@ class OrdersView(ttk.Frame):
         ).pack(pady=4, fill=X)
         ttk.Button(
             self.container,
-            text="Ver Pedidos",
+            text="Ver / Editar Pedido",
             bootstyle="outline-secondary",
-            command=self.refresh,
+            command=self.ver_pedido,
         ).pack(pady=4, fill=X)
         ttk.Button(
             self.container,
@@ -283,7 +284,22 @@ class OrdersView(ttk.Frame):
                 self.tree.item(item_id, values=values)
 
     def agregar_pedido(self, master=None):
-        dialog = ttk.Toplevel(title="Agregar Pedido")
+        self._open_order_form()
+
+    def ver_pedido(self):
+        order_id = self._selected_order_id()
+        if order_id is not None:
+            self._open_order_form(order_id)
+
+    def _open_order_form(self, order_id=None):
+        order = self.controller.get_order(order_id) if order_id is not None else None
+        if order_id is not None and order is None:
+            self.refresh()
+            return
+
+        editing = order is not None
+        title = "Ver / Editar Pedido" if editing else "Agregar Pedido"
+        dialog = ttk.Toplevel(title=title)
         dialog.geometry("460x560")
         dialog.minsize(420, 520)
         Utils.center_window(dialog)
@@ -292,26 +308,47 @@ class OrdersView(ttk.Frame):
 
         ttk.Label(
             dialog,
-            text="Agregar Pedido",
+            text=title,
             font=("Helvetica", 16, "bold"),
         ).pack(pady=(14, 8))
 
         form = ttk.Labelframe(dialog, text="Datos del pedido", padding=14)
         form.pack(fill="both", expand=True, padx=14, pady=(0, 14))
 
-        self.order_number = ttk.StringVar()
-        self.order_type = ttk.StringVar(value="Venta")
-        self.customer_name = ttk.StringVar()
-        self.order_amount = ttk.StringVar()
-        self.order_status = ttk.StringVar(value="Pendiente")
+        self.order_number = ttk.StringVar(
+            value=order["order_number"] if editing else ""
+        )
+        self.order_type = ttk.StringVar(
+            value=order["order_type"] if editing else "Venta"
+        )
+        self.customer_name = ttk.StringVar(
+            value=order["customer_name"] if editing else ""
+        )
+        self.order_amount = ttk.StringVar(
+            value=str(order["order_amount"]) if editing else ""
+        )
+        self.order_status = ttk.StringVar(
+            value=order["order_status"] if editing else "Pendiente"
+        )
 
         ttk.Label(form, text="N° Orden / Referencia").pack(anchor="w")
         ttk.Entry(form, textvariable=self.order_number).pack(
             fill="x", pady=(2, 8)
         )
 
+        start_date = date.today()
+        if editing and order["order_date"]:
+            try:
+                start_date = date.fromisoformat(order["order_date"])
+            except ValueError:
+                pass
+
         ttk.Label(form, text="Fecha de emisión").pack(anchor="w")
-        order_date = ttk.DateEntry(form, date_format="%Y-%m-%d")
+        order_date = ttk.DateEntry(
+            form,
+            date_format="%Y-%m-%d",
+            start_date=start_date,
+        )
         order_date.pack(fill="x", pady=(2, 8))
 
         ttk.Label(form, text="Tipo").pack(anchor="w")
@@ -344,9 +381,9 @@ class OrdersView(ttk.Frame):
         actions.pack(fill=X, pady=(10, 0))
         ttk.Button(
             actions,
-            text="Guardar Pedido",
+            text="Guardar cambios" if editing else "Guardar Pedido",
             bootstyle="success",
-            command=lambda: self._save_order(dialog, order_date),
+            command=lambda: self._save_order(dialog, order_date, order_id),
         ).pack(side=RIGHT)
         ttk.Button(
             actions,
@@ -355,7 +392,7 @@ class OrdersView(ttk.Frame):
             command=dialog.destroy,
         ).pack(side=RIGHT, padx=(0, 8))
 
-    def _save_order(self, dialog, order_date):
+    def _save_order(self, dialog, order_date, order_id=None):
         selected_date = order_date.get_date()
         order = {
             "order_number": self.order_number.get().strip(),
@@ -366,7 +403,10 @@ class OrdersView(ttk.Frame):
             "order_amount": self.order_amount.get().strip(),
         }
         try:
-            self.controller.add_order(order)
+            if order_id is None:
+                self.controller.add_order(order)
+            else:
+                self.controller.update_order(order_id, order)
         except (ValueError, DuplicateOrderError) as error:
             Messagebox.show_warning(str(error), title="Revisa los datos", parent=dialog)
             return

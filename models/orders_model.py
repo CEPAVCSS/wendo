@@ -35,7 +35,7 @@ class OrdersModel:
         )
         return rows[0] if rows else None
 
-    def add_order(self, order):
+    def _prepare_values(self, order, exclude_id=None):
         values = [str(order.get(field) or "").strip() for field in self.fields]
         order_number = values[0]
         order_date = values[1]
@@ -60,29 +60,47 @@ class OrdersModel:
         if amount <= 0:
             raise ValueError("El monto debe ser mayor que cero.")
 
-        if self.db.fetch_all(
-            "SELECT 1 FROM orders WHERE LOWER(TRIM(order_number)) = LOWER(TRIM(?)) LIMIT 1",
-            (order_number,),
-        ):
+        query = (
+            "SELECT 1 FROM orders "
+            "WHERE LOWER(TRIM(order_number)) = LOWER(TRIM(?))"
+        )
+        params = [order_number]
+        if exclude_id is not None:
+            query += " AND id_order <> ?"
+            params.append(exclude_id)
+        if self.db.fetch_all(query + " LIMIT 1", tuple(params)):
             raise DuplicateOrderError("Ya existe un pedido con ese número de orden.")
 
+        return (
+            order_number,
+            order_date,
+            order_type,
+            customer_name,
+            order_status,
+            amount,
+        )
+
+    def add_order(self, order):
+        values = self._prepare_values(order)
         try:
             self.db.execute(
                 "INSERT INTO orders (order_number, order_date, order_type, "
                 "customer_name, order_status, order_amount) VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    order_number,
-                    order_date,
-                    order_type,
-                    customer_name,
-                    order_status,
-                    amount,
-                ),
+                values,
             )
         except sqlite3.IntegrityError as error:
             raise DuplicateOrderError(
                 "El número de orden ya está registrado."
             ) from error
+
+    def update_order(self, order_id, order):
+        values = self._prepare_values(order, exclude_id=order_id)
+        self.db.execute(
+            "UPDATE orders SET order_number = ?, order_date = ?, order_type = ?, "
+            "customer_name = ?, order_status = ?, order_amount = ? "
+            "WHERE id_order = ?",
+            values + (order_id,),
+        )
 
     def update_status(self, order_id, order_status):
         if order_status not in ("Pendiente", "Pagado", "Entregado", "Cancelado"):

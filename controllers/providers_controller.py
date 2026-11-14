@@ -15,5 +15,8 @@ class ProvidersController:
     def add_provider(self, provider):
         self.model.add_provider(provider)
 
+    def update_provider(self, provider_id, provider):
+        self.model.update_provider(provider_id, provider)
+
     def delete_provider(self, provider_id):
         self.model.delete_provider(provider_id)

@@ -51,9 +51,9 @@ class ContactsView(ttk.Frame):
         ).pack(pady=4, fill=X)
         ttk.Button(
             self.container,
-            text="Ver Contactos",
+            text="Ver / Editar Contacto",
             bootstyle="outline-secondary",
-            command=self.refresh,
+            command=self.ver_contacto,
         ).pack(pady=4, fill=X)
         ttk.Button(
             self.container,
@@ -273,7 +273,32 @@ class ContactsView(ttk.Frame):
         self.refresh()
 
     def open_contact_form(self):
-        dialog = ttk.Toplevel(title="Agregar contacto")
+        self._open_contact_form()
+
+    def ver_contacto(self):
+        selection = self.tree.selection()
+        if not selection:
+            Messagebox.show_warning(
+                "Selecciona un contacto de la tabla.",
+                title="Sin selección",
+                parent=self,
+            )
+            return
+        self._open_contact_form(int(selection[0]))
+
+    def _open_contact_form(self, contact_id=None):
+        contact = (
+            self.controller.get_contact(contact_id)
+            if contact_id is not None
+            else None
+        )
+        if contact_id is not None and contact is None:
+            self.refresh()
+            return
+
+        editing = contact is not None
+        title = "Ver / Editar contacto" if editing else "Agregar contacto"
+        dialog = ttk.Toplevel(title=title)
         dialog.geometry("680x560")
         dialog.minsize(540, 480)
         dialog.transient(self.winfo_toplevel())
@@ -283,7 +308,7 @@ class ContactsView(ttk.Frame):
         body.pack(fill="both", expand=True)
         body.grid_columnconfigure(0, weight=1)
         body.grid_columnconfigure(1, weight=1)
-        ttk.Label(body, text="Nuevo contacto", font=("Helvetica", 17, "bold")).grid(
+        ttk.Label(body, text=title, font=("Helvetica", 17, "bold")).grid(
             row=0, column=0, columnspan=2, sticky="w", pady=(0, 12)
         )
 
@@ -314,7 +339,11 @@ class ContactsView(ttk.Frame):
             )
             field_frame.grid_columnconfigure(0, weight=1)
             ttk.Label(field_frame, text=label).grid(row=0, column=0, sticky="w")
-            variable = ttk.StringVar(value="Activo" if field == "status" else "")
+            if editing:
+                initial_value = contact[field] or ""
+            else:
+                initial_value = "Activo" if field == "status" else ""
+            variable = ttk.StringVar(value=initial_value)
             self.contact_vars[field] = variable
             if field == "segment":
                 ttk.Combobox(
@@ -340,6 +369,8 @@ class ContactsView(ttk.Frame):
         )
         address = ttk.Text(form, height=4, wrap="word")
         address.grid(row=5, column=0, columnspan=2, sticky="ew", padx=4, pady=(3, 0))
+        if editing and contact["address"]:
+            address.insert("1.0", contact["address"])
 
         actions = ttk.Frame(body)
         actions.grid(row=2, column=0, columnspan=2, sticky="e", pady=(14, 0))
@@ -348,12 +379,12 @@ class ContactsView(ttk.Frame):
         )
         ttk.Button(
             actions,
-            text="Guardar contacto",
+            text="Guardar cambios" if editing else "Guardar contacto",
             bootstyle="primary",
-            command=lambda: self.save_contact(dialog, address),
+            command=lambda: self.save_contact(dialog, address, contact_id),
         ).pack(side=RIGHT)
 
-    def save_contact(self, dialog, address):
+    def save_contact(self, dialog, address, contact_id=None):
         contact = {
             field: variable.get().strip()
             for field, variable in self.contact_vars.items()
@@ -368,7 +399,10 @@ class ContactsView(ttk.Frame):
             return
 
         try:
-            self.controller.add_contact(contact)
+            if contact_id is None:
+                self.controller.add_contact(contact)
+            else:
+                self.controller.update_contact(contact_id, contact)
         except DuplicateContactError as error:
             Messagebox.show_warning(str(error), title="Dato duplicado", parent=dialog)
             return

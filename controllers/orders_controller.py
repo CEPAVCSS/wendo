@@ -14,6 +14,9 @@ class OrdersController:
     def add_order(self, order):
         self.model.add_order(order)
 
+    def update_order(self, order_id, order):
+        self.model.update_order(order_id, order)
+
     def update_status(self, order_id, order_status):
         self.model.update_status(order_id, order_status)
 

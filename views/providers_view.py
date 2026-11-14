@@ -54,9 +54,9 @@ class ProvidersView(ttk.Frame):
         ).pack(pady=4, fill=X)
         ttk.Button(
             self.container,
-            text="Ver Proveedores",
+            text="Ver / Editar Proveedor",
             bootstyle="outline-secondary",
-            command=self.refresh,
+            command=self.ver_proveedor,
         ).pack(pady=4, fill=X)
         ttk.Button(
             self.container,
@@ -261,7 +261,32 @@ class ProvidersView(ttk.Frame):
         self.refresh()
 
     def agregar_proveedor(self, master=None):
-        dialog = ttk.Toplevel(title="Agregar Proveedor")
+        self._open_provider_form()
+
+    def ver_proveedor(self):
+        selection = self.tree.selection()
+        if not selection:
+            Messagebox.show_warning(
+                "Selecciona un proveedor de la tabla.",
+                title="Sin selección",
+                parent=self,
+            )
+            return
+        self._open_provider_form(int(selection[0]))
+
+    def _open_provider_form(self, provider_id=None):
+        provider = (
+            self.controller.get_provider(provider_id)
+            if provider_id is not None
+            else None
+        )
+        if provider_id is not None and provider is None:
+            self.refresh()
+            return
+
+        editing = provider is not None
+        title = "Ver / Editar Proveedor" if editing else "Agregar Proveedor"
+        dialog = ttk.Toplevel(title=title)
         dialog.geometry("760x600")
         dialog.minsize(680, 540)
         Utils.center_window(dialog)
@@ -270,7 +295,7 @@ class ProvidersView(ttk.Frame):
 
         ttk.Label(
             dialog,
-            text="Formulario de Proveedor",
+            text=title,
             font=("Helvetica", 16, "bold"),
         ).pack(pady=(14, 8))
 
@@ -278,15 +303,27 @@ class ProvidersView(ttk.Frame):
         form.pack(fill="both", expand=True, padx=15, pady=(0, 12))
         form.columnconfigure((0, 1), weight=1, uniform="col")
 
-        self.rif_prefix = ttk.StringVar(value="J")
-        self.rif_number = ttk.StringVar()
-        self.reason = ttk.StringVar()
-        self.provider_type = ttk.StringVar(value="Ordinario")
-        self.contact_name = ttk.StringVar()
-        self.contact_phone = ttk.StringVar()
-        self.contact_email = ttk.StringVar()
-        self.state = ttk.StringVar()
-        self.city = ttk.StringVar()
+        self.rif_prefix = ttk.StringVar(
+            value=provider["rif_prefix"] if editing else "J"
+        )
+        self.rif_number = ttk.StringVar(
+            value=provider["rif_number"] if editing else ""
+        )
+        self.reason = ttk.StringVar(value=provider["reason"] if editing else "")
+        self.provider_type = ttk.StringVar(
+            value=provider["provider_type"] if editing else "Ordinario"
+        )
+        self.contact_name = ttk.StringVar(
+            value=provider["conatct_name"] if editing else ""
+        )
+        self.contact_phone = ttk.StringVar(
+            value=provider["contact_phone"] if editing else ""
+        )
+        self.contact_email = ttk.StringVar(
+            value=provider["contact_email"] if editing else ""
+        )
+        self.state = ttk.StringVar(value=provider["state"] if editing else "")
+        self.city = ttk.StringVar(value=provider["city"] if editing else "")
 
         rif_frame = ttk.Frame(form)
         rif_frame.grid(row=0, column=0, sticky="ew", padx=(0, 8), pady=5)
@@ -411,14 +448,16 @@ class ProvidersView(ttk.Frame):
         ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(8, 0))
         address = ttk.Text(form, height=3, wrap="word")
         address.grid(row=5, column=0, columnspan=2, sticky="ew", pady=(3, 0))
+        if editing and provider["address"]:
+            address.insert("1.0", provider["address"])
 
         actions = ttk.Frame(dialog)
         actions.pack(fill=X, padx=15, pady=(0, 15))
         ttk.Button(
             actions,
-            text="Guardar Proveedor",
+            text="Guardar cambios" if editing else "Guardar Proveedor",
             bootstyle="success",
-            command=lambda: self._save_provider(dialog, address),
+            command=lambda: self._save_provider(dialog, address, provider_id),
         ).pack(side=RIGHT)
         ttk.Button(
             actions,
@@ -427,7 +466,7 @@ class ProvidersView(ttk.Frame):
             command=dialog.destroy,
         ).pack(side=RIGHT, padx=(0, 8))
 
-    def _save_provider(self, dialog, address):
+    def _save_provider(self, dialog, address, provider_id=None):
         provider = {
             "rif_prefix": self.rif_prefix.get().strip(),
             "rif_number": self.rif_number.get().strip(),
@@ -441,7 +480,10 @@ class ProvidersView(ttk.Frame):
             "address": address.get("1.0", "end-1c").strip(),
         }
         try:
-            self.controller.add_provider(provider)
+            if provider_id is None:
+                self.controller.add_provider(provider)
+            else:
+                self.controller.update_provider(provider_id, provider)
         except (ValueError, DuplicateProviderError) as error:
             Messagebox.show_warning(str(error), title="Revisa los datos", parent=dialog)
             return

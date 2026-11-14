@@ -52,9 +52,9 @@ class TodoView(ttk.Frame):
         ).pack(pady=4, fill=X)
         ttk.Button(
             self.container,
-            text="Ver Tareas",
+            text="Ver / Editar Tarea",
             bootstyle="outline-secondary",
-            command=self.refresh,
+            command=self._edit_selected_task,
         ).pack(pady=4, fill=X)
         ttk.Button(
             self.container,

@@ -24,7 +24,8 @@ class DbInit:
             order_type TEXT,
             customer_name TEXT, 
             order_status TEXT,
-            order_amount REAL )"""
+            order_amount REAL,
+            order_currency TEXT DEFAULT 'USD' )"""
 
         providers = """CREATE TABLE IF NOT EXISTS providers (
             id_provider INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -55,6 +56,8 @@ class DbInit:
         for table in table_list:
             self.conn.execute(table)
 
+        self.ensure_orders_currency()
+
         self.conn.execute(
             """CREATE UNIQUE INDEX IF NOT EXISTS idx_contacts_email_unique
             ON contacts (LOWER(TRIM(email)))
@@ -65,4 +68,13 @@ class DbInit:
             ON contacts (LOWER(TRIM(cedula_rif)))
             WHERE cedula_rif IS NOT NULL AND TRIM(cedula_rif) <> ''"""
         )
-        
+
+    def ensure_orders_currency(self):
+        columns = {
+            row["name"] for row in self.conn.fetch_all("PRAGMA table_info(orders)")
+        }
+        if "order_currency" not in columns:
+            self.conn.execute(
+                "ALTER TABLE orders ADD COLUMN order_currency TEXT DEFAULT 'USD'"
+            )
+

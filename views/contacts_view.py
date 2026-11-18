@@ -1,3 +1,6 @@
+from tkinter import dialog
+from turtle import title
+
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import (
     BOTH,
@@ -15,6 +18,7 @@ from ttkbootstrap.dialogs import Messagebox
 
 from controllers.contacts_controller import ContactsController
 from models.contacts_model import DuplicateContactError
+from utils.utils import Utils
 
 
 class ContactsView(ttk.Frame):
@@ -285,7 +289,7 @@ class ContactsView(ttk.Frame):
             )
             return
         self._open_contact_form(int(selection[0]))
-
+    
     def _open_contact_form(self, contact_id=None):
         contact = (
             self.controller.get_contact(contact_id)
@@ -299,8 +303,9 @@ class ContactsView(ttk.Frame):
         editing = contact is not None
         title = "Ver / Editar contacto" if editing else "Agregar contacto"
         dialog = ttk.Toplevel(title=title)
-        dialog.geometry("680x560")
-        dialog.minsize(540, 480)
+        dialog.geometry("760x600")
+        dialog.minsize(680, 540)
+        Utils.center_window(dialog)
         dialog.transient(self.winfo_toplevel())
         dialog.grab_set()
 

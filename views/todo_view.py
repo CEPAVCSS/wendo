@@ -58,12 +58,6 @@ class TodoView(ttk.Frame):
         ).pack(pady=4, fill=X)
         ttk.Button(
             self.container,
-            text="Editar Tarea",
-            bootstyle="outline-primary",
-            command=self._edit_selected_task,
-        ).pack(pady=4, fill=X)
-        ttk.Button(
-            self.container,
             text="Eliminar Tarea",
             bootstyle="outline-danger",
             command=self._delete_selected_task,

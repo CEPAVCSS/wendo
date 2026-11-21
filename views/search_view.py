@@ -279,3 +279,8 @@ class SearchView(ttk.Frame):
             self.results_label.configure(text=f"{len(results)} resultado(s)")
         else:
             self.results_label.configure(text="Sin resultados")
+
+
+
+
+
